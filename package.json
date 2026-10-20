@@ -1,0 +1,6 @@
+{
+  "name": "status-generator",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "dependencies": { "redis": "^4.7.0" }
+}

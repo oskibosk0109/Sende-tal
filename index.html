@@ -31,7 +31,7 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--grey);color:#fff;padding:10px 18px;border-radius:99px;font-weight:700;display:none}
 </style></head><body>
 <header><b>NORLYS</b><h1>Status-generator · Mobile Service &amp; Sales 2</h1>
-<div class="tabs"><button class="on" data-v="dash">Status</button><button data-v="admin">Indstillinger</button><button data-v="hist">Historik</button></div></header>
+<div class="tabs"><button class="on" data-v="dash">Status</button><button data-v="admin">Indstillinger</button></div></header>
 <main>
 <section id="v-dash">
   <div class="card"><h2>1. Upload filer</h2>
@@ -57,13 +57,6 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 </div>
 
 </section>
-<section id="v-hist" hidden>
-  <div class="card"><h2>Historik – seneste 30 dage</h2>
-    <p class="small" style="margin-top:-4px">Tallene gemmes automatisk, når du uploader filer eller ændrer, hvem der er med på billedet. Der gemmes pr. dato (feltet "Data for dato"), og dage ældre end 30 dage slettes automatisk.</p>
-    <div class="row"><button class="btn" id="hCsv">⬇ Eksportér CSV (til Excel/AI)</button><button class="btn out" id="hJson">⬇ Backup (JSON)</button>
-      <label class="btn out">⬆ Importér backup<input type="file" id="hImp" accept=".json" hidden></label><button class="btn out" id="hDel">🗑 Slet al historik</button></div>
-    <p class="small" id="hInfo"></p><div id="hList"></div></div>
-</section>
 <section id="v-admin" hidden>
   <div class="grid2">
   <div class="card"><h2>Medarbejdere</h2><p class="small">Ét navn pr. linje. Kun disse vises på billedet.</p><textarea id="aTeam" rows="16" style="width:100%"></textarea></div>
@@ -74,9 +67,15 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
     <div id="aFields"></div></div>
   <div class="card"><h2>Salgsbudget (måned, hele teamet)</h2><div id="aBudget" class="row"></div>
     <p class="small">Mål pr. person = budget ÷ antal medarbejdere × andel af måneden. Gul ved <input type="number" id="aYel" style="width:60px"> % af målet.</p></div>
-  <div class="card row"><button class="btn" id="aSave">Gem indstillinger</button><button class="btn out" id="aReset">Gendan standard</button></div>
+  <div class="card row"><button class="btn" id="aSave">Gem indstillinger</button><button class="btn out" id="aReset">Gendan standard</button><button class="btn out" id="aOut">Log ud</button><span class="small" id="aSync"></span></div>
 </section>
 </main><div id="toast"></div>
+<div id="login" hidden style="position:fixed;inset:0;background:var(--pet);display:flex;align-items:center;justify-content:center;z-index:50">
+ <form id="lf" style="background:#fff;border-radius:14px;padding:28px;width:340px;text-align:center">
+  <div style="color:var(--red);font-weight:800;letter-spacing:.08em">NORLYS</div><h2 style="margin:8px 0 16px">Status-generator</h2>
+  <input type="password" id="lp" placeholder="Adgangskode" style="width:100%;margin-bottom:12px" autofocus>
+  <label class="small" style="display:block;margin-bottom:12px"><input type="checkbox" id="lr" checked> Husk mig på denne computer</label>
+  <button class="btn" style="width:100%">Log ind</button><p class="warn" id="le"></p></form></div>
 <script>
 /* ================= STANDARDOPSÆTNING ================= */
 var DEF={
@@ -107,10 +106,19 @@ var SRC=["salg","drift","conf"],LBL={salg:"💰 Salg",drift:"⚙️ Drift",conf:
 function clone(o){return JSON.parse(JSON.stringify(o))}
 var CFG,BLOCKS=[],CUR="dag",ST={dag:{},uge:{},mtd:{}};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}}
-function load(){try{CFG=JSON.parse(ls("sg_cfg"))}catch(e){}if(!CFG)CFG=clone(DEF);
+/* Indstillinger ligger i Redis via /api/settings. Uploadede tal ligger kun i hukommelsen og forsvinder, når siden lukkes. */
+var PASS=null,SYNCKEYS=["title","team","alias","fields","budget","yel"];
+function getPass(){return PASS||ls("sg_pass")||sessionStorage.getItem("sg_pass")}
+function api(method,body){return fetch("/api/settings",{method:method,headers:{"Content-Type":"application/json","x-pass":getPass()||""},body:body?JSON.stringify(body):undefined,cache:"no-store"})
+ .then(function(r){if(r.status===401){logout(true);throw new Error("auth")}if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.json()})}
+function applyRemote(o){CFG=clone(DEF);if(o)SYNCKEYS.forEach(function(k){if(o[k]!=null)CFG[k]=o[k]});
  DEF.fields.forEach(function(f){if(!CFG.fields.some(function(x){return x.k===f.k}))CFG.fields.push(clone(f))});
- try{BLOCKS=JSON.parse(ls("sg_blocks"))||[]}catch(e){BLOCKS=[]}try{ST=JSON.parse(ls("sg_st"))||ST}catch(e){}}
-function save(){ls("sg_cfg",JSON.stringify(CFG));ls("sg_blocks",JSON.stringify(BLOCKS));ls("sg_st",JSON.stringify(ST))}
+ CFG.days={}}
+function save(){}
+function saveRemote(){var o={};SYNCKEYS.forEach(function(k){o[k]=CFG[k]});$("#aSync").textContent="Gemmer…";
+ return api("POST",o).then(function(r){$("#aSync").textContent="✓ Gemt på serveren "+new Date(r.updated).toLocaleTimeString("da-DK",{hour:"2-digit",minute:"2-digit"});toast("Gemt – gælder på alle computere")},
+  function(e){if(e.message!=="auth"){$("#aSync").textContent="";toast("Kunne ikke gemme: "+e.message)}})}
+function logout(bad){PASS=null;try{localStorage.removeItem("sg_pass");sessionStorage.removeItem("sg_pass")}catch(e){}$("#login").hidden=false;$("#le").textContent=bad?"Forkert adgangskode eller udløbet login":"";$("#lp").value="";$("#lp").focus()}
 var $=function(s){return document.querySelector(s)};
 function toast(s){var t=$("#toast");t.textContent=s;t.style.display="block";clearTimeout(t._t);t._t=setTimeout(function(){t.style.display="none"},2600)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -260,7 +268,7 @@ function drawWho(){var d=dataFor(CUR),ex=(ST[CUR].ex=ST[CUR].ex||{});
  $("#who").innerHTML='<span class="small"><b>Med på billedet</b> (klik for at fjerne/tilføje · overstreget = ikke på arbejde): </span>'+d.ALL.sort(function(a,b){return a.name.localeCompare(b.name)}).map(function(o){
   var on=ex[o.name]===undefined?!o._auto:!ex[o.name];return'<span class="chk'+(on?'':' off')+'" data-w="'+esc(o.name)+'">'+(on?'✓ ':'')+esc(o.name)+(o._auto&&ex[o.name]===undefined?' <i class="small">(auto: ingen kald)</i>':'')+'</span>'}).join("")+
   ' <a href="#" id="whoReset" class="small">Nulstil</a>';
- document.querySelectorAll("[data-w]").forEach(function(c){c.onclick=function(){var n=c.dataset.w,o=d.ALL.find(function(x){return x.name===n}),on=ex[n]===undefined?!o._auto:!ex[n];ex[n]=on;save();drawWho();render(CUR,$("#cv"));autoSave()}});
+ document.querySelectorAll("[data-w]").forEach(function(c){c.onclick=function(){var n=c.dataset.w,o=d.ALL.find(function(x){return x.name===n}),on=ex[n]===undefined?!o._auto:!ex[n];ex[n]=on;save();drawWho();render(CUR,$("#cv"));}});
  $("#whoReset").onclick=function(e){e.preventDefault();ST[CUR].ex={};save();drawWho();render(CUR,$("#cv"))}}
 function drawAll(){drawUp();drawBlocks();drawIssues();drawTabs();drawWho();render(CUR,$("#cv"));autoSave()}
 $("#sortF").onchange=function(){var v=this.value,f=CFG.fields.find(function(x){return x.k===v});ST[CUR].sf=v;ST[CUR].sd=f&&f.dir==="lo"?"asc":"desc";save();drawAll()};
@@ -274,31 +282,7 @@ function dlCanvas(cv,name){var a=document.createElement("a");a.href=cv.toDataURL
 $("#dl").onclick=function(){dlCanvas($("#cv"),"status-"+CUR+".png")};
 $("#dlAll").onclick=function(){P.forEach(function(p,i){setTimeout(function(){var c=document.createElement("canvas");render(p.k,c);dlCanvas(c,"status-"+p.k+".png")},i*400)})};
 document.querySelectorAll("header .tabs button").forEach(function(b){b.onclick=function(){document.querySelectorAll("header .tabs button").forEach(function(x){x.classList.toggle("on",x===b)});
- ["dash","admin","hist"].forEach(function(v){$("#v-"+v).hidden=b.dataset.v!==v});if(b.dataset.v==="admin")drawAdmin();else if(b.dataset.v==="hist")drawHist();else drawAll()}});
-
-/* ================= HISTORIK (seneste 30 dage) ================= */
-var KEEP=30;
-function hist(){try{return JSON.parse(ls("sg_hist"))||[]}catch(e){return[]}}
-function prune(h){var c=new Date();c.setDate(c.getDate()-KEEP);var cs=c.toISOString().slice(0,10);return h.filter(function(r){return r.dato>=cs})}
-function autoSave(){var dato=$("#dDate").value;if(!dato||!BLOCKS.length)return;var rows=[];
- P.forEach(function(p){if(!blockFor("salg",p.k)&&!blockFor("drift",p.k))return;dataFor(p.k).L.forEach(function(o){var r={dato:dato,periode:p.k,navn:o.name};CFG.fields.forEach(function(f){if(o[f.k]!=null)r[f.k]=Math.round(o[f.k]*10000)/10000});rows.push(r)})});
- if(!rows.length)return;try{ls("sg_hist",JSON.stringify(prune(hist().filter(function(r){return r.dato!==dato}).concat(rows))))}catch(e){}}
-var PL={dag:"I går",uge:"Uge",mtd:"Måned"};
-function drawHist(){var h=prune(hist()),days={};h.forEach(function(r){(days[r.dato]=days[r.dato]||{n:0,p:{}}).n++;days[r.dato].p[r.periode]=1});
- var ks=Object.keys(days).sort().reverse(),kb=Math.round((ls("sg_hist")||"").length/1024);
- $("#hInfo").textContent=ks.length?ks.length+" dage gemt · "+h.length+" rækker · ca. "+kb+" KB":"Ingen historik endnu – den fyldes automatisk, når du uploader filer.";
- $("#hList").innerHTML=ks.length?'<table class="t" style="margin-top:10px"><tr><th>Dato</th><th>Perioder</th><th>Rækker</th><th></th></tr>'+ks.map(function(d){
-  return'<tr><td>'+new Date(d).toLocaleDateString("da-DK",{weekday:"long",day:"numeric",month:"long"})+'</td><td>'+Object.keys(days[d].p).map(function(k){return PL[k]}).join(", ")+'</td><td>'+days[d].n+'</td><td><button class="btn out" data-hd="'+d+'" style="padding:4px 10px">Slet</button></td></tr>'}).join("")+'</table>':"";
- document.querySelectorAll("[data-hd]").forEach(function(b){b.onclick=function(){ls("sg_hist",JSON.stringify(hist().filter(function(r){return r.dato!==b.dataset.hd})));drawHist()}})}
-function dlText(txt,name,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+txt],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
-$("#hCsv").onclick=function(){var h=prune(hist());if(!h.length)return toast("Ingen historik");h.sort(function(a,b){return a.dato<b.dato?-1:a.dato>b.dato?1:0});
- var ks=["dato","periode","navn"].concat(CFG.fields.map(function(f){return f.k}));
- var hd=["Dato","Periode","Navn"].concat(CFG.fields.map(function(f){return f.l+(f.f==="time"?" (sek)":f.f==="pct"?" (andel)":"")}));
- dlText([hd.join(";")].concat(h.map(function(r){return ks.map(function(k){var v=k==="periode"?PL[r[k]]:r[k];return v==null?"":typeof v==="number"?String(v).replace(".",","):'"'+String(v).replace(/"/g,'""')+'"'}).join(";")})).join("\r\n"),"historik-30-dage.csv","text/csv")};
-$("#hJson").onclick=function(){dlText(JSON.stringify({hist:prune(hist()),cfg:CFG}),"historik-backup.json","application/json")};
-$("#hImp").onchange=function(){var f=this.files[0];this.value="";if(!f)return;f.text().then(function(t){try{var o=JSON.parse(t.replace(/^\ufeff/,"")),m={};
- hist().concat(o.hist||[]).forEach(function(r){m[r.dato+"|"+r.periode+"|"+r.navn]=r});ls("sg_hist",JSON.stringify(prune(Object.values(m))));drawHist();toast("Backup importeret")}catch(e){toast("Ugyldig fil")}})};
-$("#hDel").onclick=function(){if(confirm("Slet al historik?")){ls("sg_hist","[]");drawHist()}};
+ ["dash","admin"].forEach(function(v){$("#v-"+v).hidden=b.dataset.v!==v});if(b.dataset.v==="admin")drawAdmin();else drawAll()}});
 
 /* ================= INDSTILLINGER ================= */
 function drawAdmin(){$("#aTeam").value=CFG.team.join("\n");
@@ -317,13 +301,21 @@ $("#aSave").onclick=function(){CFG.team=$("#aTeam").value.split("\n").map(functi
  document.querySelectorAll("[data-al]").forEach(function(s){if(s.value==="__auto")delete CFG.alias[s.dataset.al];else CFG.alias[s.dataset.al]=s.value});
  CFG.fields.forEach(function(f,i){var q=function(a){return document.querySelector("[data-"+a+'="'+i+'"]')};f.show=q("fs").checked;if(q("fsrc"))f.src=q("fsrc").value;if(q("fh"))f.h=q("fh").value;f.dir=q("fd").value||undefined;
   var g=q("fg").value,y=q("fy").value,cv=function(v){return v===""?null:f.f==="pct"?+v/100:+v};f.g=cv(g);f.y=cv(y)});
- document.querySelectorAll("[data-bu]").forEach(function(i){CFG.budget[i.dataset.bu]=+i.value});CFG.yel=(+$("#aYel").value||80)/100;save();drawAdmin();toast("Gemt")};
-$("#aReset").onclick=function(){if(confirm("Gendan alle indstillinger til standard?")){var al=CFG.alias,dy=CFG.days;CFG=clone(DEF);CFG.alias=al;CFG.days=dy;save();drawAdmin();toast("Standard gendannet")}};
+ document.querySelectorAll("[data-bu]").forEach(function(i){CFG.budget[i.dataset.bu]=+i.value});CFG.yel=(+$("#aYel").value||80)/100;drawAdmin();saveRemote()};
+$("#aReset").onclick=function(){if(confirm("Gendan felter, farvegrænser og budget til standard? Medarbejdere og navnekobling bevares.")){var al=CFG.alias,tm=CFG.team,dy=CFG.days;CFG=clone(DEF);CFG.alias=al;CFG.team=tm;CFG.days=dy;drawAdmin();saveRemote()}};
 
 /* ================= START ================= */
 function initDays(){var t=new Date(),y=new Date(t);do{y.setDate(y.getDate()-1)}while(y.getDay()===0||y.getDay()===6);
  CFG.days=CFG.days||{};if(!CFG.days.monT)CFG.days.monT=22;if(!CFG.days.week)CFG.days.week=y.getDay();
  if(!CFG.days.mon){var c=0;for(var d=new Date(y.getFullYear(),y.getMonth(),1);d<=y;d.setDate(d.getDate()+1))if(d.getDay()%6)c++;CFG.days.mon=c}
  $("#dDate").value=y.toISOString().slice(0,10)}
-load();initDays();$("#dWeek").value=CFG.days.week;$("#dMon").value=CFG.days.mon;$("#dMonT").value=CFG.days.monT;drawAll();
+["sg_cfg","sg_blocks","sg_st","sg_hist","sg_days"].forEach(function(k){try{localStorage.removeItem(k)}catch(e){}});
+CFG=clone(DEF);CFG.days={};
+function start(){return api("GET").then(function(r){applyRemote(r.settings);$("#login").hidden=true;initDays();
+ $("#dWeek").value=CFG.days.week;$("#dMon").value=CFG.days.mon;$("#dMonT").value=CFG.days.monT;drawAll();
+ if(r.updated)$("#aSync").textContent="Sidst gemt på serveren "+new Date(r.updated).toLocaleString("da-DK",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})},
+ function(e){if(e.message!=="auth")toast("Kunne ikke hente indstillinger: "+e.message)})}
+$("#lf").onsubmit=function(e){e.preventDefault();PASS=$("#lp").value;try{localStorage.removeItem("sg_pass");sessionStorage.removeItem("sg_pass");($("#lr").checked?localStorage:sessionStorage).setItem("sg_pass",PASS)}catch(x){}start()};
+$("#aOut").onclick=function(){logout(false)};
+if(getPass())start();else logout(false);
 </script></body></html>
