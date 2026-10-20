@@ -60,9 +60,9 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 
 <section id="v-sl" hidden>
   <div class="card"><h2>1. Upload filer</h2>
-    <p class="small" style="margin-top:-4px">Træk Salg- og Service-udtrækket for alle medarbejdere i de tre teams ind i hvert sit felt. Nye filer erstatter de gamle.</p>
+    <p class="small" style="margin-top:-4px">Træk Salg- og Service-udtrækket for alle medarbejdere i de tre teams ind i det samme felt. Siden finder selv ud af, hvilken fil der er hvilken. Nye filer erstatter de gamle.</p>
     <input type="file" id="slxf" accept=".xlsx,.xlsm" multiple hidden>
-    <div class="grid2" id="slUp"></div></div>
+    <div id="slUp"></div></div>
   <div class="card"><h2>2. Periode</h2>
     <div class="row">Data fra <input type="date" id="slFrom"> til <input type="date" id="slTo"> <span class="small" id="slTitle"></span></div>
     <p class="small">Sættes automatisk til mandag i ugen til og med i går. Ret dem, hvis intervallet er et andet.</p></div>
@@ -138,7 +138,7 @@ var DEF={
   convRed:.05,topN:20,showN:24,fonts:{head:"Norlys Headline",body:"Aptos Narrow"},
   teams:[],teamMap:[],pairs:{},
   last:{names:[],label:"",saved:0},
-  cols:{voice:"voice",bb:"bb,norlys bb,bredband",g5:"5g,5g internet",el:"el,norlys el",tv:"tv,norlys tv",icc:"icc fejl,icc fejl %,icc",konv:"salgs konv.,salgs konv,konvertering",tid:"samtaletid inkl. readytid,samtaletid inkl readytid,samtaletid inkl. ready tid,samtaletid inkl ready tid,samtaletid",csat:"csat"}}};
+  cols:{voice:"voice",bb:"bb,norlys bb,bredband",g5:"5g,5g internet",el:"el,norlys el",tv:"tv,norlys tv",icc:"icc fejl,icc fejl %,icc",konv:"salgs konv.,salgs konv,konvertering",tid:"indgaende & ready pr agent,samtaletid inkl. readytid,samtaletid inkl readytid,samtaletid inkl. ready tid,samtaletid inkl ready tid,samtaletid",csat:"csat"}}};
 var P=[{k:"dag",l:"I går"},{k:"uge",l:"Ugen til dato"},{k:"mtd",l:"Måneden til dato"}];
 var SRC=["salg","drift","conf"],LBL={salg:"💰 Salg",drift:"⚙️ Drift",conf:"⏱ Conformance"};
 function clone(o){return JSON.parse(JSON.stringify(o))}
@@ -149,7 +149,9 @@ var PASS=null,SYNCKEYS=["title","team","alias","fields","budget","yel","sl"];
 function getPass(){return PASS||ls("sg_pass")||sessionStorage.getItem("sg_pass")}
 function api(method,body,qs){return fetch("/api/settings"+(qs||""),{method:method,headers:{"Content-Type":"application/json","x-pass":getPass()||""},body:body?JSON.stringify(body):undefined,cache:"no-store"})
  .then(function(r){if(r.status===401){logout(true);throw new Error("auth")}if(!r.ok)return r.text().then(function(t){throw new Error(t||r.status)});return r.json()})}
-function slDefaults(o){var d=clone(DEF.sl);if(o)Object.keys(o).forEach(function(k){if(k==="pts"||k==="cols"||k==="fonts")d[k]=Object.assign(d[k],o[k]);else d[k]=o[k]});return d}
+function slDefaults(o){var d=clone(DEF.sl);if(o)Object.keys(o).forEach(function(k){if(k==="pts"||k==="cols"||k==="fonts")d[k]=Object.assign(d[k],o[k]);else d[k]=o[k]});
+ var tid=String(d.cols.tid||"").split(",").map(function(x){return x.trim()}).filter(Boolean);
+ if(tid.map(norm).indexOf("indgaende & ready pr agent")<0)tid.unshift("indgaende & ready pr agent");d.cols.tid=tid.join(",");return d}
 function applyRemote(o){CFG=clone(DEF);if(o)SYNCKEYS.forEach(function(k){if(o[k]!=null&&k!=="sl")CFG[k]=o[k]});
  DEF.fields.forEach(function(f){if(!CFG.fields.some(function(x){return x.k===f.k}))CFG.fields.push(clone(f))});
  CFG.fields=CFG.fields.map(function(f){return f.k==="icc"&&f.f==="int"?clone(DEF.fields.filter(function(d){return d.k==="icc"})[0]):f});
@@ -348,14 +350,12 @@ function slTable(sheet,file,type){var R=sheet.rows,H=slHeads(type);
    rows.push({name:String(nm).trim(),team:tc>=0&&rr[tc]!=null?String(rr[tc]).trim():"",cells:cells})}
   return{file:file,sheet:sheet.name,type:type,heads:heads,rows:rows}}
  return null}
-async function slHandle(files,type){if(!window.DecompressionStream)return toast("Brug Edge eller Chrome");
- var ok=0,other=type==="salg"?"service":"salg";
- for(var f of files){try{var sh=await readBook(f),t=null,tp=type;
-   for(var s of sh){t=slTable(s,f.name,type);if(t&&t.rows.length)break;t=null}
-   if(!t){for(var s2 of sh){t=slTable(s2,f.name,other);if(t&&t.rows.length){tp=other;break}t=null}}
-   if(t){SLD[tp]=t;ok++;if(tp!==type)toast("Det lignede en "+(tp==="salg"?"Salg":"Service")+"-fil – lagt det rigtige sted")}
-   else toast(f.name+": fandt ingen tabel med de forventede kolonner")}catch(e){toast(f.name+": "+e.message)}}
- if(ok)save();drawSL()}
+function slKeys(t,tp){return SLK[tp].filter(function(k){return slHasCol(t,k)}).length}
+async function slHandle(files){if(!window.DecompressionStream)return toast("Brug Edge eller Chrome");var got=[];
+ for(var f of files){try{var sh=await readBook(f),best=null;
+   sh.forEach(function(sheet){["salg","service"].forEach(function(tp){var t=slTable(sheet,f.name,tp);if(!t||!t.rows.length)return;var n=slKeys(t,tp),sc=n/SLK[tp].length;if(n&&(!best||sc>best.sc))best={t:t,tp:tp,sc:sc}})});
+   if(best){SLD[best.tp]=best.t;got.push(best.tp==="salg"?"Salg":"Service")}else toast(f.name+": fandt ingen tabel med de forventede kolonner")}catch(e){toast(f.name+": "+e.message)}}
+ if(got.length){save();toast(got.join(" og ")+" indlæst")}drawSL()}
 function toks(n){return norm(n).replace(/\./g,"").split(/[\s\-]+/).filter(Boolean)}
 function sameName(a,b){if(norm(a)===norm(b))return true;var x=toks(a),y=toks(b);if(!x.length||!y.length||x[0]!==y[0])return false;
  var sm=x.length<=y.length?x:y,lg=x.length<=y.length?y:x;
@@ -381,7 +381,7 @@ function slMerge(){var S=SLD.salg,V=SLD.service;if(!S||!V)return null;
   if(hit){used[norm(hit.name)]=1;pairs.push({s:s,v:hit})}else onlyS.push(s)});
  var onlyV=vr.filter(function(v){return!used[norm(v.name)]});
  var teams=(CFG.sl.teams||[]).map(norm).filter(Boolean),rows=[],teamMissing=0;
- pairs.forEach(function(p){var s=p.s,v=p.v,o={name:s.name,vname:v.name,team:slTeam(v.team||s.team,tm)};if(!v.team)teamMissing++;
+ pairs.forEach(function(p){var s=p.s,v=p.v,o={name:s.name,vname:v.name,team:slTeam(s.team||v.team,tm)};if(!o.team)teamMissing++;
   ["voice","bb","g5","el","tv"].forEach(function(k){o[k]=sv(s,k,"int")||0});
   o.icc=sv(s,"icc","pct")||0;o.konv=sv(s,"konv","pct");o.tid=sv(v,"tid","time");o.csat=sv(v,"csat","pct");
   if(teams.length&&teams.indexOf(norm(o.team))<0)return;
@@ -412,7 +412,7 @@ function renderSL(cv,M){var S=CFG.sl,rows=M?M.rows:[],n=Math.min(rows.length,+S.
  cv.width=W*K;cv.height=H*K;cv.style.width=W+"px";var x=cv.getContext("2d");x.scale(K,K);
  x.fillStyle="#F3F1EA";x.fillRect(0,0,W,H);
  x.fillStyle="#3B3935";x.font="700 "+(40*k)+"px "+F.head;x.textAlign="left";x.fillText("Performance model"+(lbl?" "+lbl:""),28,86);
- var C=[["Navn","name",230,"l"],["Team","team",250,"l"],["Voice","voice",80,"r"],["Bredbånd","bb",100,"r"],["5G internet","g5",115,"r"],["Norlys EL","el",110,"r"],["Norlys TV","tv",105,"r"],
+ var C=[["Navn","name",285,"l"],["Team","team",225,"l"],["Voice","voice",80,"r"],["Bredbånd","bb",100,"r"],["5G internet","g5",115,"r"],["Norlys EL","el",110,"r"],["Norlys TV","tv",105,"r"],
   ["ICC fejl ("+Math.round(S.iccLimit*100)+"%)","icc",140,"r"],["Konvertering","konv",140,"r"],["Samtaletid ("+hm(S.timeMin)+")","tid",180,"r"],["cSat ("+Math.round(S.csatMin*100)+"%)","csat",110,"r"],["Total point","pts",120,"r"]];
  var tot=C.reduce(function(s,c){return s+c[2]},0),f=(W-56)/tot,X=28,xs=[];C.forEach(function(c){xs.push(X);c.w=c[2]*f;X+=c.w});
  var TW=X-28,HT=112,HH=34,RT=HT+HH,RH=Math.min(30,(H-RT-64)/Math.max(n,1));
@@ -427,19 +427,18 @@ function renderSL(cv,M){var S=CFG.sl,rows=M?M.rows:[],n=Math.min(rows.length,+S.
  var bn=Math.min(n,+S.topN||0);if(bn>0){x.strokeStyle="#3F3D3A";x.lineWidth=4;x.strokeRect(28,HT,TW,HH+bn*RH)}
  x.textAlign="left";x.fillStyle="#ED0812";x.font="800 "+(16*k)+"px Arial,Helvetica,sans-serif";x.fillText("NORLYS",28,H-24)}
 function slInitDates(){if($("#slFrom").value&&$("#slTo").value)return;var y=new Date();y.setDate(y.getDate()-1);var m=new Date(y);m.setDate(y.getDate()-((y.getDay()+6)%7));$("#slFrom").value=iso(m);$("#slTo").value=iso(y)}
-function drawSLup(){var T={salg:["💰 Salg","Voice, BB, 5G, El, TV, ICC fejl og konvertering"],service:["🎧 Service","Samtaletid inkl. readytid og cSat"]};
- $("#slUp").innerHTML=["salg","service"].map(function(k){var t=SLD[k];return'<div class="up" data-slup="'+k+'"><h3>'+T[k][0]+'</h3><span class="small">'+T[k][1]+'</span><div class="st">'+
-  (t?'<span class="pill ok">✓ '+esc(t.file)+' · '+t.rows.length+' medarbejdere</span>':'<span class="pill">mangler</span>')+'</div><div class="small" style="margin-top:6px">Træk filen hertil eller klik</div></div>'}).join("");
- document.querySelectorAll("[data-slup]").forEach(function(d){var k=d.dataset.slup;d.onclick=function(){SLUP=k;$("#slxf").click()};
-  d.ondragover=function(e){e.preventDefault();d.classList.add("over")};d.ondragleave=function(){d.classList.remove("over")};
-  d.ondrop=function(e){e.preventDefault();d.classList.remove("over");slHandle([].slice.call(e.dataTransfer.files),k)}})}
-var SLUP="salg";
+function drawSLup(){var T={salg:"💰 Salg",service:"🎧 Service"};
+ $("#slUp").innerHTML='<div class="up" id="slDrop"><h3>Træk Salg- og Service-filen hertil</h3><span class="small">Begge filer på én gang eller én ad gangen. Klik for at vælge filer.</span><div class="st">'+
+  ["salg","service"].map(function(k){var t=SLD[k];return t?'<span class="pill ok">'+T[k]+' ✓ '+esc(t.file)+' · '+t.rows.length+' medarbejdere</span>':'<span class="pill">'+T[k]+' mangler</span>'}).join("")+'</div></div>';
+ var d=$("#slDrop");d.onclick=function(){$("#slxf").click()};
+ d.ondragover=function(e){e.preventDefault();d.classList.add("over")};d.ondragleave=function(){d.classList.remove("over")};
+ d.ondrop=function(e){e.preventDefault();d.classList.remove("over");slHandle([].slice.call(e.dataTransfer.files))}}
 function slPair(a,b){CFG.sl.pairs=CFG.sl.pairs||{};CFG.sl.pairs[norm(a)]=b;saveRemote();drawSL()}
 function drawSLcheck(M){var el=$("#slCheck");
  if(!SLD.salg||!SLD.service){el.innerHTML='<p class="small">Upload både Salg og Service for at køre krydstjekket.</p>';return}
  var h='<p class="ok">✓ '+M.nPairs+' medarbejdere findes i begge filer (Salg: '+SLD.salg.rows.length+' rækker, Service: '+SLD.service.rows.length+' rækker). '+M.rows.length+' indgår i listen.</p>';
  if(M.missing.length)h+='<p class="warn">Kolonne ikke fundet: '+M.missing.map(esc).join(", ")+' → ret under Indstillinger › Salgslinje › Kolonneoverskrifter</p>';
- if(M.teamMissing)h+='<p class="warn">'+M.teamMissing+' medarbejdere har ingen team i Service-filen. Der bruges teamnavnet fra Salg, som kan afvige.</p>';
+ if(M.teamMissing)h+='<p class="small">'+M.teamMissing+' medarbejdere har intet team i Salg-filen.</p>';
  if(M.dup.length)h+='<p class="small">Dubletter (rækken med flest salg bruges): '+M.dup.map(esc).join(", ")+'</p>';
  var items=M.onlyS.map(function(r){return{side:"s",r:r}}).concat(M.onlyV.map(function(r){return{side:"v",r:r}}));
  if(items.length){h+='<p class="small" style="margin-top:8px">Disse navne findes kun i den ene fil og er <b>fjernet fra listen</b>. Kobl dem, hvis det er samme person skrevet forskelligt.</p><table class="t"><tr><th>Navn</th><th>Findes kun i</th><th>Team</th><th>Handling</th></tr>'+items.map(function(it,i){
@@ -466,7 +465,7 @@ function drawSLwho(M){var rows=M?M.rows:[];
 function slFontCheck(){var F=CFG.sl.fonts||{},m=[];if(!fontOk(F.head||"Norlys Headline"))m.push("«"+(F.head||"Norlys Headline")+"» (overskrift)");if(!fontOk(F.body||"Aptos Narrow"))m.push("«"+(F.body||"Aptos Narrow")+"» (tekst)");
  $("#slFontWarn").textContent=m.length?"Skrifttypen "+m.join(" og ")+" er ikke installeret på denne computer, så billedet bruger en erstatning. Tjek navnet under Indstillinger › Salgslinje › Skrifttyper.":""}
 function drawSL(){slInitDates();slFontCheck();drawSLup();SLM=slMerge();drawSLcheck(SLM);drawSLwho(SLM);$("#slTitle").textContent=slLabel()?"Titel: Performance model "+slLabel():"";renderSL($("#slcv"),SLM)}
-$("#slxf").onchange=function(){var f=[].slice.call(this.files);this.value="";slHandle(f,SLUP)};
+$("#slxf").onchange=function(){var f=[].slice.call(this.files);this.value="";slHandle(f)};
 $("#slFrom").oninput=$("#slTo").oninput=function(){$("#slTitle").textContent=slLabel()?"Titel: Performance model "+slLabel():"";renderSL($("#slcv"),SLM)};
 $("#slCopy").onclick=function(){copyCanvas($("#slcv"));slSaveEntry(true)};
 $("#slDl").onclick=function(){dlCanvas($("#slcv"),"performance-model-"+(slLabel().replace(/\//g,"-")||"liste")+".png");slSaveEntry(true)};
