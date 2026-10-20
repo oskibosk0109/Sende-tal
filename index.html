@@ -270,7 +270,7 @@ function drawWho(){var d=dataFor(CUR),ex=(ST[CUR].ex=ST[CUR].ex||{});
   ' <a href="#" id="whoReset" class="small">Nulstil</a>';
  document.querySelectorAll("[data-w]").forEach(function(c){c.onclick=function(){var n=c.dataset.w,o=d.ALL.find(function(x){return x.name===n}),on=ex[n]===undefined?!o._auto:!ex[n];ex[n]=on;save();drawWho();render(CUR,$("#cv"));}});
  $("#whoReset").onclick=function(e){e.preventDefault();ST[CUR].ex={};save();drawWho();render(CUR,$("#cv"))}}
-function drawAll(){drawUp();drawBlocks();drawIssues();drawTabs();drawWho();render(CUR,$("#cv"));autoSave()}
+function drawAll(){drawUp();drawBlocks();drawIssues();drawTabs();drawWho();render(CUR,$("#cv"))}
 $("#sortF").onchange=function(){var v=this.value,f=CFG.fields.find(function(x){return x.k===v});ST[CUR].sf=v;ST[CUR].sd=f&&f.dir==="lo"?"asc":"desc";save();drawAll()};
 $("#sortD").onchange=function(){ST[CUR].sd=this.value;save();drawAll()};
 [["#ovK","ovK"],["#ovP","ovP"],["#ovC","ovC"]].forEach(function(a){$(a[0]).oninput=function(){ST[CUR][a[1]]=this.value;save();render(CUR,$("#cv"))}});
