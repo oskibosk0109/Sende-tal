@@ -39,7 +39,7 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
     <input type="file" id="xf" accept=".xlsx,.xlsm" multiple hidden>
     <div class="up3" id="up3"></div>
     <p class="small" style="margin-top:10px">Har du hele projektmappen med alle tre perioder? <a href="#" id="upAuto">Upload den her</a>, så fordeles blokkene automatisk.</p>
-    <div id="blocks"></div></div>
+    <div id="blocks"></div><p class="small" id="savedInfo"></p></div>
   <div class="card"><h2>2. Periode og kontrol</h2>
     <div class="row">Data for dato: <input type="date" id="dDate">
       Uge, dage gået (af 5): <input type="number" id="dWeek" min="1" max="5">
@@ -55,7 +55,6 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
     <div id="who" style="margin-bottom:12px"></div>
     <canvas id="cv"></canvas>
 </div>
-
 </section>
 <section id="v-admin" hidden>
   <div class="grid2">
@@ -114,11 +113,13 @@ function api(method,body){return fetch("/api/settings",{method:method,headers:{"
 function applyRemote(o){CFG=clone(DEF);if(o)SYNCKEYS.forEach(function(k){if(o[k]!=null)CFG[k]=o[k]});
  DEF.fields.forEach(function(f){if(!CFG.fields.some(function(x){return x.k===f.k}))CFG.fields.push(clone(f))});
  CFG.days={}}
-function save(){}
+/* Seneste uploadede tal gemmes i denne browser, indtil en ny fil af samme type og periode erstatter dem, eller man trykker "Ryd alle tal". */
+function save(){try{localStorage.setItem("sg_data",JSON.stringify({blocks:BLOCKS,st:ST,saved:Date.now()}))}catch(e){toast("Kunne ikke gemme tallene i browseren")}}
+function loadData(){try{var o=JSON.parse(localStorage.getItem("sg_data"));if(o){BLOCKS=o.blocks||[];ST=o.st||ST;["dag","uge","mtd"].forEach(function(k){ST[k]=ST[k]||{}})}}catch(e){}}
 function saveRemote(){var o={};SYNCKEYS.forEach(function(k){o[k]=CFG[k]});$("#aSync").textContent="Gemmer…";
  return api("POST",o).then(function(r){$("#aSync").textContent="✓ Gemt på serveren "+new Date(r.updated).toLocaleTimeString("da-DK",{hour:"2-digit",minute:"2-digit"});toast("Gemt – gælder på alle computere")},
   function(e){if(e.message!=="auth"){$("#aSync").textContent="";toast("Kunne ikke gemme: "+e.message)}})}
-function logout(bad){PASS=null;try{localStorage.removeItem("sg_pass");sessionStorage.removeItem("sg_pass")}catch(e){}$("#login").hidden=false;$("#le").textContent=bad?"Forkert adgangskode eller udløbet login":"";$("#lp").value="";$("#lp").focus()}
+function logout(bad){PASS=null;try{localStorage.removeItem("sg_data");localStorage.removeItem("sg_pass");sessionStorage.removeItem("sg_pass")}catch(e){}$("#login").hidden=false;$("#le").textContent=bad?"Forkert adgangskode eller udløbet login":"";$("#lp").value="";$("#lp").focus()}
 var $=function(s){return document.querySelector(s)};
 function toast(s){var t=$("#toast");t.textContent=s;t.style.display="block";clearTimeout(t._t);t._t=setTimeout(function(){t.style.display="none"},2600)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -246,7 +247,8 @@ function drawUp(){$("#up3").innerHTML=P.map(function(p){var has=function(src){va
   d.ondrop=function(e){e.preventDefault();d.classList.remove("over");handle([].slice.call(e.dataTransfer.files),k)}})}
 function drawBlocks(){var h=BLOCKS.length?'<table class="t" style="margin-top:12px"><tr><th>Fil</th><th>Ark</th><th>Type</th><th>Periode</th><th>Rækker</th><th></th></tr>'+BLOCKS.map(function(b,i){
   return'<tr><td>'+esc(b.file)+'</td><td>'+esc(b.sheet)+'</td><td>'+LBL[b.src]+'</td><td><select data-bp="'+i+'"><option value="">– vælg –</option>'+P.map(function(p){return'<option value="'+p.k+'"'+(b.period===p.k?" selected":"")+'>'+p.l+'</option>'}).join("")+'</select></td><td>'+b.rows.length+'</td><td><button class="btn out" data-bd="'+i+'" style="padding:4px 10px">Fjern</button></td></tr>'}).join("")+'</table>':'';
- $("#blocks").innerHTML=h;
+ $("#blocks").innerHTML=h+(BLOCKS.length?'<div class="row" style="margin-top:10px"><button class="btn out" id="clearAll" style="padding:4px 12px">🗑 Ryd alle tal</button><span class="small">Tallene gemmes i denne browser, indtil du trækker en ny fil ind for samme periode og type.</span></div>':'');
+ if($("#clearAll"))$("#clearAll").onclick=function(){if(confirm("Fjern alle uploadede tal fra denne browser?")){BLOCKS=[];ST={dag:{},uge:{},mtd:{}};try{localStorage.removeItem("sg_data")}catch(e){}drawAll()}};
  document.querySelectorAll("[data-bp]").forEach(function(s){s.onchange=function(){var b=BLOCKS[+s.dataset.bp];BLOCKS=BLOCKS.filter(function(x){return x===b||!(x.src===b.src&&x.period===s.value)});b.period=s.value||null;save();drawAll()}});
  document.querySelectorAll("[data-bd]").forEach(function(b){b.onclick=function(){BLOCKS.splice(+b.dataset.bd,1);save();drawAll()}})}
 function drawIssues(){var msg=[];if(!CFG.team.length)msg.push('<div class="warn">Ingen medarbejdere sat op endnu → tilføj dem under Indstillinger › Medarbejdere</div>');P.forEach(function(p){var s=blockFor("salg",p.k),d=blockFor("drift",p.k);
@@ -268,7 +270,7 @@ function drawWho(){var d=dataFor(CUR),ex=(ST[CUR].ex=ST[CUR].ex||{});
  $("#who").innerHTML='<span class="small"><b>Med på billedet</b> (klik for at fjerne/tilføje · overstreget = ikke på arbejde): </span>'+d.ALL.sort(function(a,b){return a.name.localeCompare(b.name)}).map(function(o){
   var on=ex[o.name]===undefined?!o._auto:!ex[o.name];return'<span class="chk'+(on?'':' off')+'" data-w="'+esc(o.name)+'">'+(on?'✓ ':'')+esc(o.name)+(o._auto&&ex[o.name]===undefined?' <i class="small">(auto: ingen kald)</i>':'')+'</span>'}).join("")+
   ' <a href="#" id="whoReset" class="small">Nulstil</a>';
- document.querySelectorAll("[data-w]").forEach(function(c){c.onclick=function(){var n=c.dataset.w,o=d.ALL.find(function(x){return x.name===n}),on=ex[n]===undefined?!o._auto:!ex[n];ex[n]=on;save();drawWho();render(CUR,$("#cv"));}});
+ document.querySelectorAll("[data-w]").forEach(function(c){c.onclick=function(){var n=c.dataset.w,o=d.ALL.find(function(x){return x.name===n}),on=ex[n]===undefined?!o._auto:!ex[n];ex[n]=on;save();drawWho();render(CUR,$("#cv"))}});
  $("#whoReset").onclick=function(e){e.preventDefault();ST[CUR].ex={};save();drawWho();render(CUR,$("#cv"))}}
 function drawAll(){drawUp();drawBlocks();drawIssues();drawTabs();drawWho();render(CUR,$("#cv"))}
 $("#sortF").onchange=function(){var v=this.value,f=CFG.fields.find(function(x){return x.k===v});ST[CUR].sf=v;ST[CUR].sd=f&&f.dir==="lo"?"asc":"desc";save();drawAll()};
@@ -310,11 +312,12 @@ function initDays(){var t=new Date(),y=new Date(t);do{y.setDate(y.getDate()-1)}w
  if(!CFG.days.mon){var c=0;for(var d=new Date(y.getFullYear(),y.getMonth(),1);d<=y;d.setDate(d.getDate()+1))if(d.getDay()%6)c++;CFG.days.mon=c}
  $("#dDate").value=y.toISOString().slice(0,10)}
 ["sg_cfg","sg_blocks","sg_st","sg_hist","sg_days"].forEach(function(k){try{localStorage.removeItem(k)}catch(e){}});
-CFG=clone(DEF);CFG.days={};
-function start(){return api("GET").then(function(r){applyRemote(r.settings);$("#login").hidden=true;initDays();
+CFG=clone(DEF);CFG.days={};loadData();
+function start(){$("#le").textContent="Logger ind…";return api("GET").then(function(r){applyRemote(r.settings);$("#login").hidden=true;$("#le").textContent="";initDays();
  $("#dWeek").value=CFG.days.week;$("#dMon").value=CFG.days.mon;$("#dMonT").value=CFG.days.monT;drawAll();
  if(r.updated)$("#aSync").textContent="Sidst gemt på serveren "+new Date(r.updated).toLocaleString("da-DK",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})},
- function(e){if(e.message!=="auth")toast("Kunne ikke hente indstillinger: "+e.message)})}
+ function(e){if(e.message==="auth")return;var m=e.message;if(/^404|NOT_FOUND|could not be found/i.test(m))m="API'et blev ikke fundet – ligger api/settings.js i mappen api på GitHub?";
+  $("#login").hidden=false;$("#le").textContent="Fejl: "+m.slice(0,200)})}
 $("#lf").onsubmit=function(e){e.preventDefault();PASS=$("#lp").value;try{localStorage.removeItem("sg_pass");sessionStorage.removeItem("sg_pass");($("#lr").checked?localStorage:sessionStorage).setItem("sg_pass",PASS)}catch(x){}start()};
 $("#aOut").onclick=function(){logout(false)};
 if(getPass())start();else logout(false);
