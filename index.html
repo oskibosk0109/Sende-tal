@@ -29,10 +29,28 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;padding:4px 10px;border-radius:99px;background:var(--sand);margin:3px;cursor:pointer}.chk.off{opacity:.45;text-decoration:line-through}.chk.yel{background:#F6D84C}
 .pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--sand)}.pill.ok{background:#D6F1EC;color:#0C5C50}
 .fld{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--grey2)}.fld input{width:110px}
+.slzone{border:2px dashed var(--sand3);border-radius:14px;padding:22px;text-align:center;cursor:pointer;transition:.15s;background:#FBFAF6}
+.slzone:hover,.slzone.over{border-color:var(--red);background:#fff5f5}.slzone.over{box-shadow:0 0 0 4px rgba(237,8,18,.12)}
+.slzone h3{margin:0 0 4px;font-size:18px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;text-align:left}@media(max-width:800px){.tiles{grid-template-columns:1fr}}
+.tile{border:1.5px solid var(--sand3);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center;background:#fff}
+.tile.ok{border-color:#2E9E5B;background:#EEF8F2}.tile .ic{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;background:var(--sand);color:var(--grey2);flex:none}
+.tile.ok .ic{background:#2E9E5B;color:#fff}.tile b{display:block}.tile .fn{word-break:break-all}
+.slbar{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}.slbar .tile{flex:1;min-width:260px;padding:8px 12px}
+.slbar.drop{outline:3px dashed var(--red);outline-offset:4px;border-radius:12px}
+.spin{display:inline-block;width:16px;height:16px;border:3px solid var(--sand3);border-top-color:var(--red);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}@keyframes sp{to{transform:rotate(360deg)}}
+.perrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--sand3)}
+details.chk2{background:#fff;border-radius:var(--r);margin-bottom:16px;border:1.5px solid transparent}details.chk2>summary{padding:14px 18px;cursor:pointer;font-weight:700;list-style:none;display:flex;gap:10px;align-items:center}
+details.chk2>summary::-webkit-details-marker{display:none}details.chk2>summary:after{content:"▸";margin-left:auto;color:var(--grey2);transition:.15s}details.chk2[open]>summary:after{transform:rotate(90deg)}
+details.chk2.good{border-color:#BFE3CF}details.chk2.warnb{border-color:#F2C230;background:#FFFBEA}details.chk2.bad{border-color:#E0323A;background:#FFF3F3}
+details.chk2>.body{padding:0 18px 16px}
+details.adj{border:1px solid var(--sand3);border-radius:10px;margin-top:10px;background:#FBFAF6}details.adj>summary{padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px}
+details.adj>div{padding:0 14px 12px}.cnt{font-weight:400;color:var(--grey2);font-size:12px;margin-left:6px}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,158,91,.55)}100%{box-shadow:0 0 0 22px rgba(46,158,91,0)}}.pulse{animation:pulse 1s ease-out 2}
 #toast{z-index:99;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--grey);color:#fff;padding:10px 18px;border-radius:99px;font-weight:700;display:none}
 </style></head><body>
 <header><b>NORLYS</b><h1>Status-generator · Mobile Service &amp; Sales 2</h1>
-<div class="tabs"><button class="on" data-v="dash">Status</button><button data-v="admin">Indstillinger</button><button data-v="sl">Salgslinje</button></div></header>
+<div class="tabs"><button class="on" data-v="dash">Til team</button><button data-v="sl">Salgslinje</button><button data-v="admin">Indstillinger</button></div></header>
 <main>
 <section id="v-dash">
   <div class="card"><h2>1. Upload filer</h2>
@@ -59,25 +77,29 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 </section>
 
 <section id="v-sl" hidden>
-  <div class="card"><h2>1. Upload filer</h2>
-    <p class="small" style="margin-top:-4px">Træk Salg- og Service-udtrækket for alle medarbejdere i de tre teams ind i det samme felt. Siden finder selv ud af, hvilken fil der er hvilken. Nye filer erstatter de gamle.</p>
+  <div class="card"><h2>Upload filer</h2>
     <input type="file" id="slxf" accept=".xlsx,.xlsm" multiple hidden>
-    <div id="slUp"></div></div>
-  <div class="card"><h2>2. Periode</h2>
-    <div class="row">Data fra <input type="date" id="slFrom"> til <input type="date" id="slTo"> <span class="small" id="slTitle"></span></div>
-    <p class="small">Sættes automatisk til mandag i ugen til og med i går. Ret dem, hvis intervallet er et andet.</p></div>
-  <div class="card"><h2>3. Krydstjek</h2><div id="slCheck"></div></div>
-  <div class="card"><h2>4. Resultat</h2>
-    <p class="small" style="margin-top:-4px">Når du kopierer eller henter billedet, gemmes de øverste navne automatisk i Redis i 14 dage (kun navne, ingen tal). Næste uge bliver de gule.</p>
-    <div class="row" style="margin-bottom:12px"><button class="btn" id="slCopy">📋 Kopiér billede</button><button class="btn out" id="slDl">⬇ Hent PNG</button><button class="btn out" id="slCsv">⬇ Hele listen (CSV)</button><button class="btn out" id="slSave">💾 Gem som salgslinje</button><button class="btn out" id="slClear">🗑 Ryd filer</button></div>
-    <div id="slFontWarn" class="warn" style="margin-bottom:8px"></div><div id="slYel" style="margin-bottom:8px"></div>
-    <div id="slWho" style="margin-bottom:12px"></div>
-    <canvas id="slcv"></canvas></div>
+    <div id="slUp"></div>
+    <div class="row" id="slBarBtns" style="margin-top:10px" hidden><button class="btn out" id="slReplace" style="padding:6px 14px">↻ Udskift filer</button><button class="btn out" id="slClear" style="padding:6px 14px">🗑 Ryd filer</button><span class="small">Du kan også trække nye filer ind hvor som helst på siden. De erstatter de gamle.</span></div>
+    <div class="perrow"><b>Periode</b> fra <input type="date" id="slFrom"> til <input type="date" id="slTo"> <span class="small" id="slTitle"></span>
+      <span class="small" style="flex-basis:100%">Sættes automatisk til mandag i ugen til og med i går. Ret dem, hvis intervallet er et andet.</span></div></div>
+  <div id="slAfter" hidden>
+    <details class="chk2 good" id="slCkBox"><summary id="slCkSum"></summary><div class="body" id="slCheck"></div></details>
+    <div class="card" id="slResult"><h2>Resultat</h2>
+      <p class="small" style="margin-top:-4px">Når du kopierer eller henter billedet, gemmes de øverste navne automatisk i Redis i 14 dage (kun navne, ingen tal). Næste uge bliver de gule.</p>
+      <div class="row" style="margin-bottom:12px"><button class="btn" id="slCopy">📋 Kopiér billede</button><button class="btn out" id="slDl">⬇ Hent PNG</button><button class="btn out" id="slCsv">⬇ Hele listen (CSV)</button><button class="btn out" id="slSave">💾 Gem som salgslinje</button></div>
+      <div id="slFontWarn" class="warn" style="margin-bottom:8px"></div>
+      <canvas id="slcv"></canvas>
+      <details class="adj" id="dNeu"><summary>Neutralisér samtaletid <span class="cnt" id="cNeu"></span></summary><div id="slNeu"></div></details>
+      <details class="adj" id="dYel"><summary>Gul markering (var på salgslinjen sidste uge) <span class="cnt" id="cYel"></span></summary><div id="slYel"></div></details>
+      <details class="adj" id="dWho"><summary>Hvem er med i listen <span class="cnt" id="cWho"></span></summary><div id="slWho"></div></details>
+    </div>
+  </div>
 </section>
 
 <section id="v-admin" hidden>
   <div class="grid2">
-  <div class="card"><h2>Medarbejdere</h2><p class="small">Ét navn pr. linje. Kun disse vises på Status-billedet.</p><textarea id="aTeam" rows="16" style="width:100%"></textarea></div>
+  <div class="card"><h2>Medarbejdere</h2><p class="small">Ét navn pr. linje. Kun disse vises på billedet under Til team.</p><textarea id="aTeam" rows="16" style="width:100%"></textarea></div>
   <div class="card"><h2>Navnekobling</h2><p class="small">Navne fra Salg/Drift, der ikke kunne kobles automatisk, eller som du har koblet manuelt.</p><div id="aAlias"></div></div>
   </div>
   <div class="card"><h2>Feltkobling og farvegrænser</h2>
@@ -86,7 +108,7 @@ canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
   <div class="card"><h2>Salgsbudget (måned, hele teamet)</h2><div id="aBudget" class="row"></div>
     <p class="small">Mål pr. person = budget ÷ antal medarbejdere × andel af måneden. Gul ved <input type="number" id="aYel" style="width:60px"> % af målet.</p></div>
   <div class="card"><h2>Salgslinje: point og regler</h2>
-    <p class="small">Samme regler som i Performancemodel 2026.xlsx: (Voice + BB + 5G + El + TV × point, minus ICC-straf, plus cSat-bonus) × ½ hvis cSat er under grænsen × ½ hvis samtaletid er under grænsen.</p>
+    <p class="small">Samme regler som i Performancemodel 2026.xlsx (ved samme point står den med højest cSat øverst): (Voice + BB + 5G + El + TV × point, minus ICC-straf, plus cSat-bonus) × ½ hvis cSat er under grænsen × ½ hvis samtaletid er under grænsen.</p>
     <div class="row" id="aSlPts"></div>
     <div class="row" id="aSlRules" style="margin-top:10px"></div>
     <label class="small" style="display:block;margin-top:10px"><input type="checkbox" id="sl_miss"> Giv cSat-bonus, når cSat mangler (sådan gør Excel i dag: tom cSat tæller som "over 90 %")</label>
@@ -142,7 +164,7 @@ var DEF={
 var P=[{k:"dag",l:"I går"},{k:"uge",l:"Ugen til dato"},{k:"mtd",l:"Måneden til dato"}];
 var SRC=["salg","drift","conf"],LBL={salg:"💰 Salg",drift:"⚙️ Drift",conf:"⏱ Conformance"};
 function clone(o){return JSON.parse(JSON.stringify(o))}
-var CFG,BLOCKS=[],CUR="dag",ST={dag:{},uge:{},mtd:{}},SLD={salg:null,service:null},SLX={ex:{}},SLH=[];
+var CFG,BLOCKS=[],CUR="dag",ST={dag:{},uge:{},mtd:{}},SLD={salg:null,service:null},SLX={ex:{},neu:null},SLH=[];
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}}
 /* Indstillinger ligger i Redis via /api/settings. Uploadede tal gemmes kun i denne browser, indtil nye filer erstatter dem. */
 var PASS=null,SYNCKEYS=["title","team","alias","fields","budget","yel","sl"];
@@ -157,7 +179,7 @@ function applyRemote(o){CFG=clone(DEF);if(o)SYNCKEYS.forEach(function(k){if(o[k]
  CFG.fields=CFG.fields.map(function(f){return f.k==="icc"&&f.f==="int"?clone(DEF.fields.filter(function(d){return d.k==="icc"})[0]):f});
  CFG.sl=slDefaults(o&&o.sl);CFG.days={}}
 function save(){try{localStorage.setItem("sg_data",JSON.stringify({blocks:BLOCKS,st:ST,sld:SLD,slx:SLX,saved:Date.now()}))}catch(e){toast("Kunne ikke gemme tallene i browseren")}}
-function loadData(){try{var o=JSON.parse(localStorage.getItem("sg_data"));if(o){BLOCKS=o.blocks||[];ST=o.st||ST;["dag","uge","mtd"].forEach(function(k){ST[k]=ST[k]||{}});SLD=o.sld||SLD;SLX=o.slx||SLX;SLX.ex=SLX.ex||{}}}catch(e){}}
+function loadData(){try{var o=JSON.parse(localStorage.getItem("sg_data"));if(o){BLOCKS=o.blocks||[];ST=o.st||ST;["dag","uge","mtd"].forEach(function(k){ST[k]=ST[k]||{}});SLD=o.sld||SLD;SLX=o.slx||SLX;SLX.ex=SLX.ex||{};SLX.neu=SLX.neu||null}}catch(e){}}
 function saveRemote(){var o={};SYNCKEYS.forEach(function(k){o[k]=CFG[k]});$("#aSync").textContent="Gemmer…";
  return api("POST",o).then(function(r){$("#aSync").textContent="✓ Gemt på serveren "+new Date(r.updated).toLocaleTimeString("da-DK",{hour:"2-digit",minute:"2-digit"});toast("Gemt – gælder på alle computere")},
   function(e){if(e.message!=="auth"){$("#aSync").textContent="";toast("Kunne ikke gemme: "+e.message)}})}
@@ -352,10 +374,13 @@ function slTable(sheet,file,type){var R=sheet.rows,H=slHeads(type);
  return null}
 function slKeys(t,tp){return SLK[tp].filter(function(k){return slHasCol(t,k)}).length}
 async function slHandle(files){if(!window.DecompressionStream)return toast("Brug Edge eller Chrome");var got=[];
+ SLBUSY=files.length;drawSLup();await new Promise(function(r){setTimeout(r,30)});
  for(var f of files){try{var sh=await readBook(f),best=null;
    sh.forEach(function(sheet){["salg","service"].forEach(function(tp){var t=slTable(sheet,f.name,tp);if(!t||!t.rows.length)return;var n=slKeys(t,tp),sc=n/SLK[tp].length;if(n&&(!best||sc>best.sc))best={t:t,tp:tp,sc:sc}})});
    if(best){SLD[best.tp]=best.t;got.push(best.tp==="salg"?"Salg":"Service")}else toast(f.name+": fandt ingen tabel med de forventede kolonner")}catch(e){toast(f.name+": "+e.message)}}
- if(got.length){save();toast(got.join(" og ")+" indlæst")}drawSL()}
+ SLBUSY=0;if(got.length)save();drawSL();
+ if(got.length){var both=SLD.salg&&SLD.service;toast(both?got.join(" og ")+" indlæst – listen er klar":got.join(" og ")+" indlæst – mangler "+(SLD.salg?"Service":"Salg"));
+  if(both)setTimeout(function(){var r=$("#slResult");r.scrollIntoView({behavior:"smooth",block:"start"});r.classList.remove("pulse");void r.offsetWidth;r.classList.add("pulse")},80)}}
 function toks(n){return norm(n).replace(/\./g,"").split(/[\s\-]+/).filter(Boolean)}
 function sameName(a,b){if(norm(a)===norm(b))return true;var x=toks(a),y=toks(b);if(!x.length||!y.length||x[0]!==y[0])return false;
  var sm=x.length<=y.length?x:y,lg=x.length<=y.length?y:x;
@@ -368,8 +393,10 @@ function slPoints(r){var S=CFG.sl,p=S.pts,v=r.voice*p.voice+r.bb*p.bb+r.g5*p.g5+
  if(r.icc>S.iccLimit)v+=S.iccPen;
  if(r.csat!=null?r.csat>S.csatBonusAt:S.csatBonusIfMissing)v+=S.csatBonus;
  if(r.csat!=null&&r.csat<S.csatMin)v*=.5;
- if(r.tid!=null&&r.tid<S.timeMin)v*=.5;
+ if(r.tid!=null&&r.tid<S.timeMin&&!r.neu)v*=.5;
  return v}
+function slNeuKey(){return $("#slFrom").value+"|"+$("#slTo").value}
+function slNeu(){return SLX.neu&&SLX.neu.key===slNeuKey()?SLX.neu.names:{}}
 function slMerge(){var S=SLD.salg,V=SLD.service;if(!S||!V)return null;
  var Pm=CFG.sl.pairs||{},dup=[],amb={},manual=[],tm=teamMapObj();
  function dedupe(rows,lbl){var m={},out=[];rows.forEach(function(r){var k=norm(r.name);if(m[k]!==undefined){dup.push(r.name+" ("+lbl+")");if(slScore(r)>slScore(out[m[k]]))out[m[k]]=r}else{m[k]=out.length;out.push(r)}});return out}
@@ -386,8 +413,10 @@ function slMerge(){var S=SLD.salg,V=SLD.service;if(!S||!V)return null;
   o.icc=sv(s,"icc","pct")||0;o.konv=sv(s,"konv","pct");o.tid=sv(v,"tid","time");o.csat=sv(v,"csat","pct");
   if(teams.length&&teams.indexOf(norm(o.team))<0)return;
   if(SLX.ex[norm(o.name)])return;
-  o.pts=slPoints(o);o.i=rows.length;rows.push(o)});
- rows.sort(function(a,b){return b.pts-a.pts||a.i-b.i});
+  o.neu=!!slNeu()[norm(o.name)];o.pts=slPoints(o);o.i=rows.length;rows.push(o)});
+ /* Samme point: højeste cSat øverst. Mangler cSat, kommer de nederst blandt dem med samme point. */
+ var rp=function(v){return Math.round(v*100)};
+ rows.sort(function(a,b){var d=rp(b.pts)-rp(a.pts);if(d)return d;var ca=a.csat==null?-1:a.csat,cb=b.csat==null?-1:b.csat;if(cb!==ca)return cb-ca;return a.i-b.i});
  var missing=[];SLK.salg.forEach(function(k){if(!slHasCol(S,k))missing.push("Salg: "+SLL[k])});SLK.service.forEach(function(k){if(!slHasCol(V,k))missing.push("Service: "+SLL[k])});
  return{rows:rows,onlyS:onlyS,onlyV:onlyV,amb:amb,dup:dup,manual:manual,missing:missing,teamMissing:teamMissing,nPairs:pairs.length}}
 function slHasCol(t,k){return String(CFG.sl.cols[k]||"").split(",").map(norm).filter(Boolean).some(function(h){return t.heads.indexOf(h)>=0})}
@@ -427,16 +456,23 @@ function renderSL(cv,M){var S=CFG.sl,rows=M?M.rows:[],n=Math.min(rows.length,+S.
  var bn=Math.min(n,+S.topN||0);if(bn>0){x.strokeStyle="#3F3D3A";x.lineWidth=4;x.strokeRect(28,HT,TW,HH+bn*RH)}
  x.textAlign="left";x.fillStyle="#ED0812";x.font="800 "+(16*k)+"px Arial,Helvetica,sans-serif";x.fillText("NORLYS",28,H-24)}
 function slInitDates(){if($("#slFrom").value&&$("#slTo").value)return;var y=new Date();y.setDate(y.getDate()-1);var m=new Date(y);m.setDate(y.getDate()-((y.getDay()+6)%7));$("#slFrom").value=iso(m);$("#slTo").value=iso(y)}
-function drawSLup(){var T={salg:"💰 Salg",service:"🎧 Service"};
- $("#slUp").innerHTML='<div class="up" id="slDrop"><h3>Træk Salg- og Service-filen hertil</h3><span class="small">Begge filer på én gang eller én ad gangen. Klik for at vælge filer.</span><div class="st">'+
-  ["salg","service"].map(function(k){var t=SLD[k];return t?'<span class="pill ok">'+T[k]+' ✓ '+esc(t.file)+' · '+t.rows.length+' medarbejdere</span>':'<span class="pill">'+T[k]+' mangler</span>'}).join("")+'</div></div>';
- var d=$("#slDrop");d.onclick=function(){$("#slxf").click()};
- d.ondragover=function(e){e.preventDefault();d.classList.add("over")};d.ondragleave=function(){d.classList.remove("over")};
- d.ondrop=function(e){e.preventDefault();d.classList.remove("over");slHandle([].slice.call(e.dataTransfer.files))}}
+var SLBUSY=0,SLCK=null;
+function drawSLup(){var T={salg:["💰","Salg","Voice, BB, 5G, El, TV, ICC fejl og konvertering"],service:["🎧","Service","Samtaletid inkl. readytid og cSat"]},both=!!(SLD.salg&&SLD.service);
+ var tile=function(k){var t=SLD[k],x=T[k];return'<div class="tile'+(t?' ok':'')+'"><div class="ic">'+(t?'✓':x[0])+'</div><div><b>'+x[1]+'</b>'+(t?'<span class="small fn">'+esc(t.file)+' · '+t.rows.length+' medarbejdere</span>':'<span class="small">Mangler · '+x[2]+'</span>')+'</div></div>'};
+ if(SLBUSY)$("#slUp").innerHTML='<div class="slzone" style="cursor:default"><h3><span class="spin"></span>Læser filer…</h3><span class="small">Finder tabeller og kolonner</span></div>';
+ else if(both)$("#slUp").innerHTML='<div class="slbar" id="slDrop">'+tile("salg")+tile("service")+'</div>';
+ else $("#slUp").innerHTML='<div class="slzone" id="slDrop"><h3>Træk Salg- og Service-filen hertil</h3><span class="small">Begge filer på én gang eller én ad gangen. Siden finder selv ud af, hvilken der er hvilken. Klik for at vælge filer.</span><div class="tiles">'+tile("salg")+tile("service")+'</div></div>';
+ $("#slBarBtns").hidden=!(both||SLD.salg||SLD.service)||!!SLBUSY;
+ var d=$("#slDrop");if(d&&!both)d.onclick=function(){$("#slxf").click()}}
+var SLDRAG=0;
+(function(){var sec=document.getElementById("v-sl"),isF=function(e){return e.dataTransfer&&[].indexOf.call(e.dataTransfer.types||[],"Files")>=0},mark=function(on){var d=document.getElementById("slDrop");if(d)d.classList[on?"add":"remove"](d.classList.contains("slbar")?"drop":"over")};
+ sec.addEventListener("dragenter",function(e){if(!isF(e))return;e.preventDefault();SLDRAG++;mark(true)});
+ sec.addEventListener("dragover",function(e){if(!isF(e))return;e.preventDefault();e.dataTransfer.dropEffect="copy"});
+ sec.addEventListener("dragleave",function(e){if(!isF(e))return;SLDRAG=Math.max(0,SLDRAG-1);if(!SLDRAG)mark(false)});
+ sec.addEventListener("drop",function(e){if(!isF(e))return;e.preventDefault();SLDRAG=0;mark(false);slHandle([].slice.call(e.dataTransfer.files))})})();
 function slPair(a,b){CFG.sl.pairs=CFG.sl.pairs||{};CFG.sl.pairs[norm(a)]=b;saveRemote();drawSL()}
-function drawSLcheck(M){var el=$("#slCheck");
- if(!SLD.salg||!SLD.service){el.innerHTML='<p class="small">Upload både Salg og Service for at køre krydstjekket.</p>';return}
- var h='<p class="ok">✓ '+M.nPairs+' medarbejdere findes i begge filer (Salg: '+SLD.salg.rows.length+' rækker, Service: '+SLD.service.rows.length+' rækker). '+M.rows.length+' indgår i listen.</p>';
+function drawSLcheck(M){var el=$("#slCheck"),box=$("#slCkBox"),both=!!(SLD.salg&&SLD.service);$("#slAfter").hidden=!both;if(!both||!M)return;
+ var h='<p class="small">Salg: '+SLD.salg.rows.length+' rækker · Service: '+SLD.service.rows.length+' rækker · '+M.nPairs+' fundet i begge · '+M.rows.length+' indgår i listen.</p>';
  if(M.missing.length)h+='<p class="warn">Kolonne ikke fundet: '+M.missing.map(esc).join(", ")+' → ret under Indstillinger › Salgslinje › Kolonneoverskrifter</p>';
  if(M.teamMissing)h+='<p class="small">'+M.teamMissing+' medarbejdere har intet team i Salg-filen.</p>';
  if(M.dup.length)h+='<p class="small">Dubletter (rækken med flest salg bruges): '+M.dup.map(esc).join(", ")+'</p>';
@@ -445,15 +481,30 @@ function drawSLcheck(M){var el=$("#slCheck");
    var opts=(it.side==="s"?M.onlyV:M.onlyS).map(function(o){return'<option value="'+esc(o.name)+'">Kobl til '+esc(o.name)+'</option>'}).join("");
    return'<tr><td>'+esc(it.r.name)+(M.amb[norm(it.r.name)]?' <span class="small">(passer til flere)</span>':'')+'</td><td>'+(it.side==="s"?"Salg":"Service")+'</td><td>'+esc(it.r.team)+'</td><td><select data-sp="'+i+'"><option value="">Fjern (standard)</option>'+opts+'</select></td></tr>'}).join("")+'</table>'}
  if(M.manual.length)h+='<p class="small" style="margin-top:8px"><b>Manuelle koblinger:</b> '+M.manual.map(function(m,i){return esc(m.s.name)+' → '+esc(m.v.name)+' <a href="#" data-um="'+i+'">fjern</a>'}).join(" · ")+'</p>';
+ var lvl=M.missing.length?"bad":items.length?"warnb":"good";box.className="chk2 "+lvl;
+ $("#slCkSum").innerHTML=(M.missing.length?'<span>⛔ Kolonne ikke fundet: '+M.missing.map(esc).join(", ")+'</span>':'<span>✓ '+M.nPairs+' medarbejdere parret mellem Salg og Service</span>')+(items.length?'<span style="font-weight:400">· ⚠ '+items.length+' navn'+(items.length>1?'e':'')+' findes kun i én fil og er fjernet – klik for at koble</span>':'');
+ if(M.missing.length)box.open=true;
  el.innerHTML=h;
  document.querySelectorAll("[data-sp]").forEach(function(s){s.onchange=function(){if(!s.value)return;var it=items[+s.dataset.sp];if(it.side==="s")slPair(it.r.name,s.value);else slPair(s.value,it.r.name)}});
  document.querySelectorAll("[data-um]").forEach(function(a){a.onclick=function(e){e.preventDefault();delete CFG.sl.pairs[norm(M.manual[+a.dataset.um].s.name)];saveRemote();drawSL()}})}
+function drawSLneu(M){var rows=M?M.rows:[],nm=slNeu(),S=CFG.sl;
+ if(!rows.length){$("#slNeu").innerHTML="";$("#cNeu").textContent="";return}
+ var on=rows.filter(function(o){return o.neu}),under=rows.filter(function(o){return!o.neu&&o.tid!=null&&o.tid<S.timeMin}).sort(function(a,b){return a.tid-b.tid}),rest=rows.filter(function(o){return!o.neu&&!(o.tid!=null&&o.tid<S.timeMin)}).sort(function(a,b){return a.name.localeCompare(b.name)});
+ var opt=function(o){return'<option value="'+esc(norm(o.name))+'">'+esc(o.name)+' ('+hm(o.tid)+')</option>'};
+ $("#cNeu").textContent=on.length?on.length+" valgt":"ingen valgt";
+ $("#slNeu").innerHTML='<p class="small" style="margin:8px 0">Halverer ikke pointene, selv om samtaletiden er under '+hm(S.timeMin)+'. Gælder kun dette interval.</p>'+
+  (on.length?on.map(function(o){return'<span class="chk" data-nu="'+esc(norm(o.name))+'" style="background:#CFE8F3">'+esc(o.name)+' · '+hm(o.tid)+' ✕</span>'}).join(""):'<span class="small">ingen</span>')+
+  ' <select id="slNeuAdd"><option value="">＋ Tilføj person</option>'+(under.length?'<optgroup label="Under grænsen nu">'+under.map(opt).join("")+'</optgroup>':'')+(rest.length?'<optgroup label="Øvrige">'+rest.map(opt).join("")+'</optgroup>':'')+'</select>'+
+  '<span class="small"> · nulstilles automatisk, når datoerne ændres</span>';
+ document.querySelectorAll("[data-nu]").forEach(function(c){c.onclick=function(){delete slNeu()[c.dataset.nu];save();drawSL()}});
+ $("#slNeuAdd").onchange=function(){if(!this.value)return;if(!SLX.neu||SLX.neu.key!==slNeuKey())SLX.neu={key:slNeuKey(),names:{}};SLX.neu.names[this.value]=1;save();drawSL()}}
 function drawSLwho(M){var rows=M?M.rows:[];
- $("#slWho").innerHTML=rows.length||Object.keys(SLX.ex).some(function(k){return SLX.ex[k]})?'<span class="small"><b>Med i listen</b> (klik for at fjerne): </span>'+rows.map(function(o){return'<span class="chk" data-sx="'+esc(norm(o.name))+'">'+esc(o.name)+' · '+o.pts.toFixed(1).replace(".",",")+'</span>'}).join("")+
+ $("#slWho").innerHTML=rows.length||Object.keys(SLX.ex).some(function(k){return SLX.ex[k]})?'<p class="small" style="margin:8px 0">Klik på en person for at fjerne vedkommende fra listen.</p>'+rows.map(function(o){return'<span class="chk" data-sx="'+esc(norm(o.name))+'">'+esc(o.name)+' · '+o.pts.toFixed(1).replace(".",",")+'</span>'}).join("")+
   Object.keys(SLX.ex).filter(function(k){return SLX.ex[k]}).map(function(k){return'<span class="chk off" data-sx="'+esc(k)+'">'+esc(k)+'</span>'}).join(""):"";
  document.querySelectorAll("[data-sx]").forEach(function(c){c.onclick=function(){var k=c.dataset.sx;if(SLX.ex[k])delete SLX.ex[k];else SLX.ex[k]=1;save();drawSL()}});
  var pv=slPrev(),all=slEntries(),au=slAuto(),names=pv?pv.names:[],edit=pv&&pv.id;
- $("#slYel").innerHTML='<span class="small"><b>Gul = var på salgslinjen sidste uge</b> · brug listen: </span><select id="slYsel"><option value="">Automatisk'+(au?' ('+esc(au.label)+')':'')+'</option>'+
+ var exN=Object.keys(SLX.ex).filter(function(k){return SLX.ex[k]}).length;$("#cWho").textContent=rows.length+" i listen"+(exN?" · "+exN+" fjernet":"");$("#cYel").textContent=pv?pv.names.length+" navne · "+(pv.label||""):"ingen liste endnu";
+ $("#slYel").innerHTML='<span class="small">Brug listen: </span><select id="slYsel"><option value="">Automatisk'+(au?' ('+esc(au.label)+')':'')+'</option>'+
   all.map(function(e){return'<option value="'+esc(e.id)+'"'+(SLX.yel===e.id?' selected':'')+'>'+esc(e.label)+' · '+e.names.length+' navne</option>'}).join("")+'</select>'+
   (edit?' <a href="#" id="slYdel" class="small">slet denne liste</a>':'')+
   '<div style="margin-top:6px">'+(names.length?names.map(function(n,i){return'<span class="chk yel" data-yx="'+i+'">'+esc(n)+(edit?' ✕':'')+'</span>'}).join(""):'<span class="small">Ingen gemt salgslinje for sidste uge endnu. Den gemmes automatisk, når du kopierer eller henter billedet.</span>')+
@@ -464,15 +515,17 @@ function drawSLwho(M){var rows=M?M.rows:[];
  if($("#slAdd"))$("#slAdd").onchange=function(){if(!this.value)return;slPost({entry:{from:pv.from,to:pv.to,label:pv.label,names:pv.names.concat([this.value])}})}}
 function slFontCheck(){var F=CFG.sl.fonts||{},m=[];if(!fontOk(F.head||"Norlys Headline"))m.push("«"+(F.head||"Norlys Headline")+"» (overskrift)");if(!fontOk(F.body||"Aptos Narrow"))m.push("«"+(F.body||"Aptos Narrow")+"» (tekst)");
  $("#slFontWarn").textContent=m.length?"Skrifttypen "+m.join(" og ")+" er ikke installeret på denne computer, så billedet bruger en erstatning. Tjek navnet under Indstillinger › Salgslinje › Skrifttyper.":""}
-function drawSL(){slInitDates();slFontCheck();drawSLup();SLM=slMerge();drawSLcheck(SLM);drawSLwho(SLM);$("#slTitle").textContent=slLabel()?"Titel: Performance model "+slLabel():"";renderSL($("#slcv"),SLM)}
+function drawSL(){slInitDates();slFontCheck();drawSLup();SLM=slMerge();drawSLcheck(SLM);drawSLneu(SLM);drawSLwho(SLM);$("#slTitle").textContent=slLabel()?"Titel: Performance model "+slLabel():"";renderSL($("#slcv"),SLM)}
+$("#slReplace").onclick=function(){$("#slxf").click()};
+$("#slCkBox").addEventListener("toggle",function(){SLCK=this.open});
 $("#slxf").onchange=function(){var f=[].slice.call(this.files);this.value="";slHandle(f)};
-$("#slFrom").oninput=$("#slTo").oninput=function(){$("#slTitle").textContent=slLabel()?"Titel: Performance model "+slLabel():"";renderSL($("#slcv"),SLM)};
+$("#slFrom").oninput=$("#slTo").oninput=function(){if(SLD.salg&&SLD.service){drawSL();return}$("#slTitle").textContent=slLabel()?"Titel: Performance model "+slLabel():"";renderSL($("#slcv"),SLM)};
 $("#slCopy").onclick=function(){copyCanvas($("#slcv"));slSaveEntry(true)};
 $("#slDl").onclick=function(){dlCanvas($("#slcv"),"performance-model-"+(slLabel().replace(/\//g,"-")||"liste")+".png");slSaveEntry(true)};
-$("#slCsv").onclick=function(){if(!SLM||!SLM.rows.length)return toast("Ingen liste endnu");var h=["Navn","Team","Voice","Bredbånd","5G internet","El","TV","ICC fejl","Konvertering","Samtaletid (sek)","cSat","Total point"],q=function(v){return v==null?"":typeof v==="number"?String(Math.round(v*10000)/10000).replace(".",","):'"'+String(v).replace(/"/g,'""')+'"'};
- dlText([h.join(";")].concat(SLM.rows.map(function(o){return[o.name,o.team,o.voice,o.bb,o.g5,o.el,o.tv,o.icc,o.konv,o.tid,o.csat,o.pts].map(q).join(";")})).join("\r\n"),"performance-model.csv","text/csv")};
+$("#slCsv").onclick=function(){if(!SLM||!SLM.rows.length)return toast("Ingen liste endnu");var h=["Navn","Team","Voice","Bredbånd","5G internet","El","TV","ICC fejl","Konvertering","Samtaletid (sek)","cSat","Total point","Samtaletid neutraliseret"],q=function(v){return v==null?"":typeof v==="number"?String(Math.round(v*10000)/10000).replace(".",","):'"'+String(v).replace(/"/g,'""')+'"'};
+ dlText([h.join(";")].concat(SLM.rows.map(function(o){return[o.name,o.team,o.voice,o.bb,o.g5,o.el,o.tv,o.icc,o.konv,o.tid,o.csat,o.pts,o.neu?"Ja":""].map(q).join(";")})).join("\r\n"),"performance-model.csv","text/csv")};
 $("#slSave").onclick=function(){slSaveEntry(false)};
-$("#slClear").onclick=function(){if(confirm("Fjern de uploadede Salg- og Service-filer fra denne browser?")){SLD={salg:null,service:null};SLX={ex:{}};save();drawSL()}};
+$("#slClear").onclick=function(){if(confirm("Fjern de uploadede Salg- og Service-filer fra denne browser?")){SLD={salg:null,service:null};SLX={ex:{},neu:null};save();drawSL()}};
 
 /* ================= INDSTILLINGER ================= */
 function drawAdmin(){$("#aTeam").value=CFG.team.join("\n");
