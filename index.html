@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="da"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta name="googlebot" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Status-generator · Mobile Service & Sales 2</title>
+<style>
+:root{--red:#ED0812;--pet:#0C4C4E;--pet3:#023A3C;--sand:#F4F2EC;--sand3:#E0DBCD;--grey:#2E2924;--grey2:#5b5650;--r:10px}
+*{box-sizing:border-box}body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:var(--sand);color:var(--grey)}
+header{background:var(--pet);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+header h1{font-size:20px;margin:0;flex:1}header b{color:var(--red);letter-spacing:.08em}
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.1);padding:4px;border-radius:99px}
+.tabs button{border:0;background:none;color:#fff;font:600 14px "Segoe UI",system-ui,sans-serif;padding:8px 16px;border-radius:99px;cursor:pointer}
+.tabs button.on{background:#fff;color:var(--pet)}
+main{max-width:1600px;margin:0 auto;padding:20px}
+.card{background:#fff;border-radius:var(--r);padding:18px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:18px}
+.btn{border:0;border-radius:99px;padding:9px 18px;font:700 14px "Segoe UI",system-ui,sans-serif;cursor:pointer;background:var(--red);color:#fff}
+.btn.out{background:#fff;color:var(--grey);box-shadow:inset 0 0 0 1.5px var(--grey)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+table.t{border-collapse:collapse;width:100%;font-size:13px}table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--sand3);text-align:left}
+input,select,textarea{font:inherit;padding:6px 8px;border:1px solid var(--sand3);border-radius:6px}
+input[type=number]{width:90px}.small{font-size:12px;color:var(--grey2)}
+.ptabs{display:flex;gap:6px;margin-bottom:12px}.ptabs button{border:0;padding:8px 16px;border-radius:8px;background:var(--sand);font-weight:700;cursor:pointer}
+.ptabs button.on{background:var(--pet);color:#fff}
+canvas{max-width:100%;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.warn{color:#b00;font-size:13px}.ok{color:#0c5c50;font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.up3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:800px){.up3{grid-template-columns:1fr}}
+.up{border:2px dashed var(--sand3);border-radius:var(--r);padding:16px;cursor:pointer;text-align:center}.up:hover,.up.over{border-color:var(--red);background:#fff5f5}
+.up h3{margin:0 0 8px;font-size:17px}.up .st{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;padding:4px 10px;border-radius:99px;background:var(--sand);margin:3px;cursor:pointer}.chk.off{opacity:.45;text-decoration:line-through}
+.pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--sand)}.pill.ok{background:#D6F1EC;color:#0C5C50}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--grey);color:#fff;padding:10px 18px;border-radius:99px;font-weight:700;display:none}
+</style></head><body>
+<header><b>NORLYS</b><h1>Status-generator · Mobile Service &amp; Sales 2</h1>
+<div class="tabs"><button class="on" data-v="dash">Status</button><button data-v="admin">Indstillinger</button><button data-v="hist">Historik</button></div></header>
+<main>
+<section id="v-dash">
+  <div class="card"><h2>1. Upload filer</h2>
+    <p class="small" style="margin-top:-4px">Træk filerne ind i feltet for den periode, tallene gælder for. Siden finder selv ud af, om det er Salg, Drift eller Conformance. Conformance er valgfri.</p>
+    <input type="file" id="xf" accept=".xlsx,.xlsm" multiple hidden>
+    <div class="up3" id="up3"></div>
+    <p class="small" style="margin-top:10px">Har du hele projektmappen med alle tre perioder? <a href="#" id="upAuto">Upload den her</a>, så fordeles blokkene automatisk.</p>
+    <div id="blocks"></div></div>
+  <div class="card"><h2>2. Periode og kontrol</h2>
+    <div class="row">Data for dato: <input type="date" id="dDate">
+      Uge, dage gået (af 5): <input type="number" id="dWeek" min="1" max="5">
+      Måned, arbejdsdage gået: <input type="number" id="dMon" min="1"> af <input type="number" id="dMonT" min="1"></div>
+    <div id="issues" style="margin-top:8px"></div></div>
+  <div class="card"><h2>3. Screenshot</h2>
+    <div class="ptabs" id="ptabs"></div>
+    <div class="row" style="margin-bottom:12px">Sortér efter <select id="sortF"></select><select id="sortD"><option value="desc">Højeste først</option><option value="asc">Laveste først</option></select>
+      Team-konvertering (manuel, %): <input type="number" step="0.1" id="ovK" placeholder="auto">
+      Team-KPT (manuel): <input type="number" step="0.01" id="ovP" placeholder="auto">
+      Team-conformance (manuel, %): <input type="number" step="0.1" id="ovC" placeholder="auto">
+      <button class="btn" id="copy">📋 Kopiér billede</button><button class="btn out" id="dl">⬇ Hent PNG</button><button class="btn out" id="dlAll">⬇ Hent alle 3</button></div>
+    <div id="who" style="margin-bottom:12px"></div>
+    <canvas id="cv"></canvas>
+</div>
+
+</section>
+<section id="v-hist" hidden>
+  <div class="card"><h2>Historik – seneste 30 dage</h2>
+    <p class="small" style="margin-top:-4px">Tallene gemmes automatisk, når du uploader filer eller ændrer, hvem der er med på billedet. Der gemmes pr. dato (feltet "Data for dato"), og dage ældre end 30 dage slettes automatisk.</p>
+    <div class="row"><button class="btn" id="hCsv">⬇ Eksportér CSV (til Excel/AI)</button><button class="btn out" id="hJson">⬇ Backup (JSON)</button>
+      <label class="btn out">⬆ Importér backup<input type="file" id="hImp" accept=".json" hidden></label><button class="btn out" id="hDel">🗑 Slet al historik</button></div>
+    <p class="small" id="hInfo"></p><div id="hList"></div></div>
+</section>
+<section id="v-admin" hidden>
+  <div class="grid2">
+  <div class="card"><h2>Medarbejdere</h2><p class="small">Ét navn pr. linje. Kun disse vises på billedet.</p><textarea id="aTeam" rows="16" style="width:100%"></textarea></div>
+  <div class="card"><h2>Navnekobling</h2><p class="small">Navne fra Salg/Drift, der ikke kunne kobles automatisk, eller som du har koblet manuelt.</p><div id="aAlias"></div></div>
+  </div>
+  <div class="card"><h2>Feltkobling og farvegrænser</h2>
+    <p class="small">Kolonneoverskrifter: flere alternativer adskilt med komma (store/små bogstaver og æøå ignoreres). Procent indtastes i %, tid i sekunder.</p>
+    <div id="aFields"></div></div>
+  <div class="card"><h2>Salgsbudget (måned, hele teamet)</h2><div id="aBudget" class="row"></div>
+    <p class="small">Mål pr. person = budget ÷ antal medarbejdere × andel af måneden. Gul ved <input type="number" id="aYel" style="width:60px"> % af målet.</p></div>
+  <div class="card row"><button class="btn" id="aSave">Gem indstillinger</button><button class="btn out" id="aReset">Gendan standard</button></div>
+</section>
+</main><div id="toast"></div>
+<script>
+/* ================= STANDARDOPSÆTNING ================= */
+var DEF={
+ title:"Mobile Service & Sales 2",
+ team:[],
+ alias:{},
+ fields:[
+  {k:"voice",l:"Voice",src:"salg",h:"voice",f:"int",sum:1,show:1},
+  {k:"bb",l:"Bredbånd",src:"salg",h:"bb,bredband",f:"int",sum:1,show:1},
+  {k:"el",l:"El",src:"salg",h:"el",f:"int",sum:1,show:1},
+  {k:"salg",l:"Antal salg",src:"salg",h:"total salg",f:"int",sum:1,show:1},
+  {k:"andel",l:"Andel af salget",src:"calc",h:"",f:"pct",show:1},
+  {k:"konv",l:"Konvertering",src:"salg",h:"salgs konv.,salgs konv,konvertering",f:"pct",show:1,dir:"hi",g:.10,y:.08},
+  {k:"kpt",l:"KPT",src:"drift",h:"kpt",f:"dec",show:1,dir:"hi",g:6.8,y:6.0},
+  {k:"kald",l:"Kald i alt",src:"drift",h:"total kald,kald",f:"int",sum:1,show:1,only:"dag"},
+  {k:"att",l:"Samtaletid",src:"drift",h:"att",f:"time",show:1,dir:"lo",g:420,y:480},
+  {k:"awt",l:"Wrap up",src:"drift",h:"awt",f:"time",show:1,dir:"lo",g:60,y:90,fb:"wrapup,wrap up"},
+  {k:"csat",l:"cSAT",src:"drift",h:"csat",f:"pct",show:1,dir:"hi",g:.85,y:.75},
+  {k:"ftr",l:"FTR",src:"drift",h:"ftr",f:"pct",show:1,dir:"hi",g:.80,y:.70},
+  {k:"icc",l:"ICC Fejl",src:"salg",h:"icc fejl,icc",f:"int",sum:1,show:1,dir:"lo",g:0,y:1},
+  {k:"adh",l:"Adherence",src:"drift",h:"adherence%,adherence %,adherence",f:"pct",show:1,dir:"hi",g:.90,y:.85},
+  {k:"conf",l:"Conformance",src:"conf",h:"conformance",f:"pct",show:1,dir:"hi",g:.90,y:.80},
+  {k:"pov",l:"Pause overforbrug",src:"conf",h:"pause overforbrug",f:"time",show:1,dir:"lo",g:0,y:300},
+  {k:"tov",l:"Total overforbrug",src:"conf",h:"total overforbrug",f:"time",show:0,dir:"lo",g:300,y:900}],
+ budget:{voice:263,bb:162,el:107,salg:573},yel:.8};
+var P=[{k:"dag",l:"I går"},{k:"uge",l:"Ugen til dato"},{k:"mtd",l:"Måneden til dato"}];
+var SRC=["salg","drift","conf"],LBL={salg:"💰 Salg",drift:"⚙️ Drift",conf:"⏱ Conformance"};
+function clone(o){return JSON.parse(JSON.stringify(o))}
+var CFG,BLOCKS=[],CUR="dag",ST={dag:{},uge:{},mtd:{}};
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}}
+function load(){try{CFG=JSON.parse(ls("sg_cfg"))}catch(e){}if(!CFG)CFG=clone(DEF);
+ DEF.fields.forEach(function(f){if(!CFG.fields.some(function(x){return x.k===f.k}))CFG.fields.push(clone(f))});
+ try{BLOCKS=JSON.parse(ls("sg_blocks"))||[]}catch(e){BLOCKS=[]}try{ST=JSON.parse(ls("sg_st"))||ST}catch(e){}}
+function save(){ls("sg_cfg",JSON.stringify(CFG));ls("sg_blocks",JSON.stringify(BLOCKS));ls("sg_st",JSON.stringify(ST))}
+var $=function(s){return document.querySelector(s)};
+function toast(s){var t=$("#toast");t.textContent=s;t.style.display="block";clearTimeout(t._t);t._t=setTimeout(function(){t.style.display="none"},2600)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function plabel(k){return P.find(function(p){return p.k===k}).l}
+
+/* ================= EXCEL-LÆSER (ingen biblioteker) ================= */
+function u16(v,o){return v.getUint16(o,true)}function u32(v,o){return v.getUint32(o,true)}
+async function inflate(b){var s=new Blob([b]).stream().pipeThrough(new DecompressionStream("deflate-raw"));return new Uint8Array(await new Response(s).arrayBuffer())}
+async function unzip(buf){var v=new DataView(buf),e=buf.byteLength-22;while(e>=0&&u32(v,e)!==0x06054b50)e--;if(e<0)throw new Error("ikke en gyldig Excel-fil");
+ var n=u16(v,e+10),off=u32(v,e+16),out={},dec=new TextDecoder();
+ for(var i=0;i<n;i++){var m=u16(v,off+10),cs=u32(v,off+20),nl=u16(v,off+28),xl=u16(v,off+30),cl=u16(v,off+32),lo=u32(v,off+42),name=dec.decode(new Uint8Array(buf,off+46,nl));
+  out[name]={m:m,d:new Uint8Array(buf,lo+30+u16(v,lo+26)+u16(v,lo+28),cs)};off+=46+nl+xl+cl}
+ return async function(nm){var f=out[nm];if(!f)return null;return dec.decode(f.m===8?await inflate(f.d):f.d)}}
+function colIdx(r){var s=r.replace(/[0-9]/g,""),n=0;for(var i=0;i<s.length;i++)n=n*26+s.charCodeAt(i)-64;return n-1}
+function tags(doc,t){return Array.prototype.slice.call(doc.getElementsByTagName(t))}
+async function readBook(file){var get=await unzip(await file.arrayBuffer()),X=new DOMParser(),ss=[];
+ var sx=await get("xl/sharedStrings.xml");if(sx)tags(X.parseFromString(sx,"application/xml"),"si").forEach(function(si){ss.push(tags(si,"t").map(function(t){return t.textContent}).join(""))});
+ var wb=X.parseFromString(await get("xl/workbook.xml"),"application/xml"),rel=X.parseFromString(await get("xl/_rels/workbook.xml.rels"),"application/xml"),map={};
+ tags(rel,"Relationship").forEach(function(r){map[r.getAttribute("Id")]=r.getAttribute("Target")});
+ var sheets=[];for(var s of tags(wb,"sheet")){var rid=s.getAttribute("r:id")||s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id"),tg=map[rid];if(!tg)continue;
+  tg=tg.replace(/^\/?xl\//,"");var xml=await get("xl/"+tg);if(!xml)continue;var d=X.parseFromString(xml,"application/xml"),rows=[];
+  tags(d,"row").forEach(function(r){var ri=+r.getAttribute("r")-1,row=[];tags(r,"c").forEach(function(c){var t=c.getAttribute("t"),vv=c.getElementsByTagName("v")[0],val;
+    if(t==="s")val=vv?ss[+vv.textContent]:"";else if(t==="inlineStr")val=tags(c,"t").map(function(x){return x.textContent}).join("");else if(t==="str"||t==="b"||t==="e")val=vv?vv.textContent:"";else val=vv?parseFloat(vv.textContent):null;
+    row[colIdx(c.getAttribute("r"))]=val});rows[ri]=row});
+  for(var i=0;i<rows.length;i++)if(!rows[i])rows[i]=[];sheets.push({name:s.getAttribute("name"),rows:rows})}
+ return sheets}
+
+/* ================= FIND BLOKKE ================= */
+function norm(s){return String(s==null?"":s).toLowerCase().replace(/ø/g,"o").replace(/æ/g,"ae").replace(/å/g,"a").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim()}
+var NAMEH=["agent","navn","medarbejder","medarbejdernavn","name","agent navn"];
+function allHeaders(){var a=[];CFG.fields.forEach(function(f){(f.h+","+(f.fb||"")).split(",").forEach(function(x){x=norm(x);if(x)a.push(x)})});return a}
+function periodOf(txt){var t=norm(txt);if(/i ?gar|igar|daglig|yesterday/.test(t))return"dag";if(/mane?d|mtd|month/.test(t))return"mtd";if(/uge|wtd|week/.test(t))return"uge";return null}
+function findBlocks(sheet,file){var R=sheet.rows,H=allHeaders(),out=[];
+ for(var i=0;i<R.length;i++){var row=R[i],nc=-1,hits=0;
+  for(var c=0;c<row.length;c++){var x=norm(row[c]);if(!x)continue;if(nc<0&&NAMEH.indexOf(x)>=0)nc=c;else if(H.indexOf(x)>=0)hits++}
+  if(nc<0||hits<1)continue;
+  var heads=row.map(norm),src=heads.indexOf("conformance")>=0?"conf":heads.indexOf("total salg")>=0?"salg":(heads.indexOf("kpt")>=0||heads.indexOf("aht")>=0)?"drift":(/drift/i.test(sheet.name)?"drift":"salg");
+  if(src!=="conf"&&hits<2)continue;
+  var per=null;if(src!=="conf")for(var b=i;b>=Math.max(0,i-6)&&!per;b--)(R[b]||[]).forEach(function(v){if(!per&&typeof v==="string")per=periodOf(v)});
+  var rows=[];for(var j=i+1;j<R.length;j++){var nm=R[j][nc];if(nm==null||String(nm).trim()==="")break;var nn=norm(nm);
+   if(/^(total|i alt|sum)$/.test(nn)||NAMEH.indexOf(nn)>=0)break;var cells={};heads.forEach(function(h,ci){if(h&&ci!==nc)cells[h]=R[j][ci]});rows.push({name:String(nm).trim(),cells:cells})}
+  out.push({file:file,sheet:sheet.name,src:src,period:per,rows:rows});i=j-1}
+ /* Conformance-filen har én blok pr. team: læg dem sammen til én */
+ var cf=out.filter(function(b){return b.src==="conf"});
+ if(cf.length>1){cf[0].rows=[].concat.apply([],cf.map(function(b){return b.rows}));out=out.filter(function(b){return b.src!=="conf"||b===cf[0]})}
+ var other=out.filter(function(b){return b.src!=="conf"});
+ if(other.some(function(b){return!b.period})){var sp=periodOf(sheet.name);if(sp&&other.length===1)other[0].period=sp;else if(other.length===3)other.forEach(function(b,k){if(!b.period)b.period=["dag","uge","mtd"][k]})}
+ return out}
+async function handle(files,force){if(!window.DecompressionStream)return toast("Brug Edge eller Chrome");var got=[];
+ for(var f of files){try{var sh=await readBook(f);sh.forEach(function(s){var bs=findBlocks(s,f.name);
+   if(force){var seen={};bs=bs.filter(function(b){if(seen[b.src])return false;seen[b.src]=1;b.period=force;return true})}
+   bs.forEach(function(b){BLOCKS=BLOCKS.filter(function(x){return!(x.src===b.src&&x.period&&x.period===b.period)});BLOCKS.push(b);got.push(LBL[b.src])})})}catch(e){toast(f.name+": "+e.message)}}
+ save();toast(got.length?(force?plabel(force)+": ":"")+got.join(", ")+" indlæst":"Ingen data fundet i filen");drawAll()}
+
+/* ================= TAL OG NAVNE ================= */
+function toNum(v,f){if(v==null||v==="")return null;
+ if(f==="time"){if(typeof v==="number")return v<1?v*86400:v;var p=String(v).trim().split(":").map(Number);if(p.some(isNaN))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p.length===2?p[0]*60+p[1]:p[0]}
+ if(typeof v==="string"){var pc=/%/.test(v);v=parseFloat(v.replace("%","").replace(",","."));if(isNaN(v))return null;if(pc)return v/100}
+ if(f==="pct"&&v>1.5)return v/100;return v}
+function pick(cells,list){var ks=String(list||"").split(",").map(norm).filter(Boolean);for(var k of ks)if(k in cells&&cells[k]!==""&&cells[k]!=null&&cells[k]!=="-")return cells[k];return null}
+function matchName(raw){var a=CFG.alias[norm(raw)];if(a!==undefined)return a||null;
+ var f=norm(raw).split(" "),best=null;CFG.team.forEach(function(p){var q=norm(p).split(" "),s=0;
+  if(norm(p)===norm(raw))s=3;else if(q[0]===f[0]&&q[q.length-1]===f[f.length-1])s=2;
+  else if(q[0]===f[0]&&(f[f.length-1].replace(".","").length<=2&&q[q.length-1].indexOf(f[f.length-1].replace(".",""))===0))s=1.5;
+  if(s&&(!best||s>best.s))best={p:p,s:s}});return best?best.p:null}
+function blockFor(src,per){return BLOCKS.filter(function(x){return x.src===src&&x.period===per}).pop()}
+function dataFor(per){var M={},un=[];
+ SRC.forEach(function(src){var b=blockFor(src,per);if(!b)return;
+  b.rows.forEach(function(r){var p=matchName(r.name);if(!p){if(src!=="conf"&&CFG.alias[norm(r.name)]!=="")un.push(r.name);return}
+   var o=M[p]=M[p]||{name:p};CFG.fields.forEach(function(f){if(f.src===src){var v=toNum(pick(r.cells,f.h),f.f);if(v!=null)o[f.k]=v}
+    if(f.fb&&src==="salg"){var w=toNum(pick(r.cells,f.fb),f.f);if(w!=null)o["_fb_"+f.k]=w}});
+   if(src==="conf"){o._conf=1;["frokost planlagt","pause planlagt","moder planlagt","total overforbrug"].forEach(function(h,i){var v=toNum(r.cells[h],"time");if(v!=null)o["_c"+i]=v})}})});
+ var L=Object.keys(M).map(function(k){var o=M[k];CFG.fields.forEach(function(f){if(o[f.k]==null&&o["_fb_"+f.k]!=null)o[f.k]=o["_fb_"+f.k]});return o});
+ L.forEach(function(o){if(o.kald||o.salg!=null)CFG.fields.forEach(function(f){if(f.sum&&f.src==="salg"&&o[f.k]==null)o[f.k]=0})});
+ var st=ST[per]||{},ex=st.ex||{};L.forEach(function(o){o._auto=!(o.kald>0)&&!(o.salg>0)});
+ var ALL=L.slice();L=L.filter(function(o){return ex[o.name]===undefined?!o._auto:!ex[o.name]});
+ var tot=L.reduce(function(s,o){return s+(o.salg||0)},0);L.forEach(function(o){o.andel=tot?(o.salg||0)/tot:null});
+ return{L:L,ALL:ALL,un:un.filter(function(x,i,a){return a.indexOf(x)===i})}}
+function scale(per){var mt=+CFG.days.monT||22;return per==="dag"?1/mt:per==="uge"?(+CFG.days.week||1)/mt:(+CFG.days.mon||1)/mt}
+function teamRow(L,per){var t={name:"Team",team:1},st=ST[per]||{};
+ CFG.fields.forEach(function(f){var vs=L.map(function(o){return o[f.k]}).filter(function(v){return v!=null});if(!vs.length)return;
+  t[f.k]=f.sum?vs.reduce(function(a,b){return a+b},0):vs.reduce(function(a,b){return a+b},0)/vs.length});
+ t.andel=1;
+ if(st.ovK!=null&&st.ovK!=="")t.konv=+st.ovK/100;if(st.ovP!=null&&st.ovP!=="")t.kpt=+st.ovP;if(st.ovC!=null&&st.ovC!=="")t.conf=+st.ovC/100;
+ return t}
+function color(f,v,per,isTeam,n){if(v==null)return null;
+ if(f.dir){var g=+f.g,y=+f.y;if(f.dir==="hi")return v>=g?"g":v>=y?"y":"r";return v<=g?"g":v<=y?"y":"r"}
+ var b=CFG.budget[f.k];if(b){var tgt=b*scale(per)/(isTeam?1:Math.max(1,n));return v>=tgt?"g":v>=tgt*CFG.yel?"y":"r"}return null}
+function fmt(v,f){if(v==null||isNaN(v))return"–";if(f==="int")return String(Math.round(v));if(f==="dec")return v.toFixed(2).replace(".",",");
+ if(f==="pct")return(v*100).toFixed(1).replace(".",",")+" %";if(f==="time"){v=Math.round(v);return Math.floor(v/60)+":"+("0"+v%60).slice(-2)}return String(v)}
+
+/* ================= BILLEDE ================= */
+var COL={g:["#2E9E5B","#FFFFFF"],y:["#F2C230","#3A2A00"],r:["#E0323A","#FFFFFF"]};
+function cols(per){var hasConf=!!blockFor("conf",per);return CFG.fields.filter(function(f){return f.show&&(!f.only||f.only===per)&&(f.src!=="conf"||hasConf)})}
+function subtitle(per){var mt=+CFG.days.monT,m=+CFG.days.mon,w=+CFG.days.week;
+ if(per==="uge")return w+" af 5 dage i ugen · salgsmål = "+w+" af "+mt+" arbejdsdage i måneden";
+ if(per==="mtd")return m+" af "+mt+" arbejdsdage = "+Math.round(m/mt*100)+" % af månedsmålet";return"Salgsmål = én arbejdsdag ("+Math.round(1000/mt)/10+" % af måneden)"}
+function render(per,cv){var d=dataFor(per),L=d.L,C=cols(per),st=ST[per]||{},sf=st.sf||"salg",sd=st.sd||"desc";
+ L.sort(function(a,b){if(sf==="name")return sd==="asc"?a.name.localeCompare(b.name):b.name.localeCompare(a.name);var x=a[sf],y=b[sf];if(x==null)return 1;if(y==null)return-1;return sd==="asc"?x-y:y-x});
+ var T=teamRow(L,per),rows=[T].concat(L),S=2,NW=230,CW=92,RH=34,HH=46,TOP=86,W=NW+CW*C.length+24,H=TOP+HH+RH*rows.length+40;
+ cv.width=W*S;cv.height=H*S;cv.style.width=W+"px";var x=cv.getContext("2d");x.scale(S,S);
+ x.fillStyle="#fff";x.fillRect(0,0,W,H);x.fillStyle="#0C4C4E";x.fillRect(0,0,W,70);
+ x.fillStyle="#fff";x.font="700 20px Segoe UI";x.fillText(CFG.title+" · "+plabel(per),16,32);
+ var dt=$("#dDate").value?new Date($("#dDate").value).toLocaleDateString("da-DK",{weekday:"long",day:"numeric",month:"long"}):"";
+ x.font="400 13px Segoe UI";x.fillStyle="#DBE7E4";x.fillText((dt?"Data til og med "+dt+" · ":"")+subtitle(per),16,54);
+ x.fillStyle="#ED0812";x.font="800 16px Segoe UI";x.textAlign="right";x.fillText("NORLYS",W-16,32);x.textAlign="left";
+ var y0=TOP;x.fillStyle="#F4F2EC";x.fillRect(12,y0,W-24,HH);x.fillStyle="#2E2924";x.font="700 12px Segoe UI";x.fillText("Navn",22,y0+28);
+ C.forEach(function(f,i){x.textAlign="center";var cx=12+NW+CW*i+CW/2,w=f.l.split(" ");if(w.length>1&&x.measureText(f.l).width>CW-8){x.fillText(w.slice(0,Math.ceil(w.length/2)).join(" "),cx,y0+20);x.fillText(w.slice(Math.ceil(w.length/2)).join(" "),cx,y0+36)}else x.fillText(f.l,cx,y0+28)});x.textAlign="left";
+ rows.forEach(function(o,ri){var yy=y0+HH+ri*RH;if(o.team){x.fillStyle="#DBE7E4";x.fillRect(12,yy,W-24,RH)}else if(ri%2===0){x.fillStyle="#FAF9F6";x.fillRect(12,yy,W-24,RH)}
+  x.fillStyle="#2E2924";x.font=(o.team?"800":"600")+" 13px Segoe UI";x.fillText(o.team?"Team i alt ("+L.length+")":o.name,22,yy+22);
+  C.forEach(function(f,i){var v=o[f.k],c=color(f,v,per,o.team,L.length),cx=12+NW+CW*i;if(c){x.fillStyle=COL[c][0];x.fillRect(cx+4,yy+5,CW-8,RH-10)}
+   x.fillStyle=c?COL[c][1]:"#2E2924";x.font=(o.team?"800":"600")+" 13px Segoe UI";x.textAlign="center";x.fillText(fmt(v,f.f),cx+CW/2,yy+22);x.textAlign="left"});
+  x.strokeStyle="#E0DBCD";x.beginPath();x.moveTo(12,yy+RH);x.lineTo(W-12,yy+RH);x.stroke()});
+ x.font="400 11px Segoe UI";var ly=H-16;[["g","Mål nået"],["y","Tæt på"],["r","Under mål"]].forEach(function(k,i){x.fillStyle=COL[k[0]][0];x.fillRect(16+i*110,ly-10,14,14);x.fillStyle="#5b5650";x.fillText(k[1],36+i*110,ly+1)});
+ return d}
+
+/* ================= SIDE ================= */
+var xf=$("#xf"),UPP=null;xf.onchange=function(){var f=[].slice.call(this.files);this.value="";handle(f,UPP)};
+$("#upAuto").onclick=function(e){e.preventDefault();UPP=null;xf.click()};
+function drawUp(){$("#up3").innerHTML=P.map(function(p){var has=function(src){var b=blockFor(src,p.k);
+   return b?'<span class="pill ok">'+LBL[src]+' ✓ '+b.rows.length+'</span>':'<span class="pill">'+LBL[src]+(src==="conf"?" (valgfri)":" mangler")+'</span>'};
+  return'<div class="up" data-up="'+p.k+'"><h3>'+p.l+'</h3><span class="small">Træk filer hertil eller klik</span><div class="st">'+SRC.map(has).join("")+'</div></div>'}).join("");
+ document.querySelectorAll("[data-up]").forEach(function(d){var k=d.dataset.up;d.onclick=function(){UPP=k;xf.click()};
+  d.ondragover=function(e){e.preventDefault();d.classList.add("over")};d.ondragleave=function(){d.classList.remove("over")};
+  d.ondrop=function(e){e.preventDefault();d.classList.remove("over");handle([].slice.call(e.dataTransfer.files),k)}})}
+function drawBlocks(){var h=BLOCKS.length?'<table class="t" style="margin-top:12px"><tr><th>Fil</th><th>Ark</th><th>Type</th><th>Periode</th><th>Rækker</th><th></th></tr>'+BLOCKS.map(function(b,i){
+  return'<tr><td>'+esc(b.file)+'</td><td>'+esc(b.sheet)+'</td><td>'+LBL[b.src]+'</td><td><select data-bp="'+i+'"><option value="">– vælg –</option>'+P.map(function(p){return'<option value="'+p.k+'"'+(b.period===p.k?" selected":"")+'>'+p.l+'</option>'}).join("")+'</select></td><td>'+b.rows.length+'</td><td><button class="btn out" data-bd="'+i+'" style="padding:4px 10px">Fjern</button></td></tr>'}).join("")+'</table>':'';
+ $("#blocks").innerHTML=h;
+ document.querySelectorAll("[data-bp]").forEach(function(s){s.onchange=function(){var b=BLOCKS[+s.dataset.bp];BLOCKS=BLOCKS.filter(function(x){return x===b||!(x.src===b.src&&x.period===s.value)});b.period=s.value||null;save();drawAll()}});
+ document.querySelectorAll("[data-bd]").forEach(function(b){b.onclick=function(){BLOCKS.splice(+b.dataset.bd,1);save();drawAll()}})}
+function drawIssues(){var msg=[];if(!CFG.team.length)msg.push('<div class="warn">Ingen medarbejdere sat op endnu → tilføj dem under Indstillinger › Medarbejdere</div>');P.forEach(function(p){var s=blockFor("salg",p.k),d=blockFor("drift",p.k);
+  if(!s||!d)msg.push('<div class="warn">'+p.l+': mangler '+[!s?"salgsdata":"",!d?"driftsdata":""].filter(Boolean).join(" og ")+'</div>');
+  var dd=dataFor(p.k);if(dd.un.length)msg.push('<div class="warn">'+p.l+': ikke koblet: '+dd.un.map(esc).join(", ")+' → ret under Indstillinger › Navnekobling</div>');
+  if(blockFor("conf",p.k)){var miss=CFG.team.filter(function(n){return!dd.L.some(function(o){return o.name===n&&o._conf})});
+   if(miss.length)msg.push('<div class="small">'+p.l+': ingen conformance for '+miss.map(esc).join(", ")+' (fri, syg eller ikke på vagt?)</div>')}});
+ var miss=[];CFG.fields.forEach(function(f){if(f.src==="calc")return;var b=BLOCKS.find(function(x){return x.src===f.src});if(!b||!b.rows[0])return;
+   var hs=Object.keys(b.rows[0].cells),alt=(f.h+(f.fb?","+f.fb:"")).split(",").map(norm);
+   if(!alt.some(function(k){return hs.indexOf(k)>=0})&&!(f.fb&&BLOCKS.some(function(x){return x.src==="salg"&&x.rows[0]&&pick(x.rows[0].cells,f.fb)!=null})))miss.push(f.l)});
+ if(miss.length)msg.push('<div class="warn">Kolonne ikke fundet for: '+miss.join(", ")+' → tjek Feltkobling</div>');
+ $("#issues").innerHTML=msg.length?msg.join(""):(BLOCKS.length?'<div class="ok">✓ Alt koblet</div>':"")}
+function drawTabs(){$("#ptabs").innerHTML=P.map(function(p){return'<button data-p="'+p.k+'"'+(p.k===CUR?' class="on"':'')+'>'+p.l+'</button>'}).join("");
+ document.querySelectorAll("[data-p]").forEach(function(b){b.onclick=function(){CUR=b.dataset.p;drawAll()}});
+ var st=ST[CUR]=ST[CUR]||{};$("#sortF").innerHTML='<option value="name">Navn</option>'+cols(CUR).map(function(f){return'<option value="'+f.k+'"'+((st.sf||"salg")===f.k?" selected":"")+'>'+f.l+'</option>'}).join("");
+ $("#sortD").value=st.sd||"desc";$("#ovK").value=st.ovK==null?"":st.ovK;$("#ovP").value=st.ovP==null?"":st.ovP;$("#ovC").value=st.ovC==null?"":st.ovC}
+function drawWho(){var d=dataFor(CUR),ex=(ST[CUR].ex=ST[CUR].ex||{});
+ if(!d.ALL.length){$("#who").innerHTML="";return}
+ $("#who").innerHTML='<span class="small"><b>Med på billedet</b> (klik for at fjerne/tilføje · overstreget = ikke på arbejde): </span>'+d.ALL.sort(function(a,b){return a.name.localeCompare(b.name)}).map(function(o){
+  var on=ex[o.name]===undefined?!o._auto:!ex[o.name];return'<span class="chk'+(on?'':' off')+'" data-w="'+esc(o.name)+'">'+(on?'✓ ':'')+esc(o.name)+(o._auto&&ex[o.name]===undefined?' <i class="small">(auto: ingen kald)</i>':'')+'</span>'}).join("")+
+  ' <a href="#" id="whoReset" class="small">Nulstil</a>';
+ document.querySelectorAll("[data-w]").forEach(function(c){c.onclick=function(){var n=c.dataset.w,o=d.ALL.find(function(x){return x.name===n}),on=ex[n]===undefined?!o._auto:!ex[n];ex[n]=on;save();drawWho();render(CUR,$("#cv"));autoSave()}});
+ $("#whoReset").onclick=function(e){e.preventDefault();ST[CUR].ex={};save();drawWho();render(CUR,$("#cv"))}}
+function drawAll(){drawUp();drawBlocks();drawIssues();drawTabs();drawWho();render(CUR,$("#cv"));autoSave()}
+$("#sortF").onchange=function(){var v=this.value,f=CFG.fields.find(function(x){return x.k===v});ST[CUR].sf=v;ST[CUR].sd=f&&f.dir==="lo"?"asc":"desc";save();drawAll()};
+$("#sortD").onchange=function(){ST[CUR].sd=this.value;save();drawAll()};
+[["#ovK","ovK"],["#ovP","ovP"],["#ovC","ovC"]].forEach(function(a){$(a[0]).oninput=function(){ST[CUR][a[1]]=this.value;save();render(CUR,$("#cv"))}});
+["#dWeek","#dMon","#dMonT"].forEach(function(s,i){$(s).oninput=function(){CFG.days[["week","mon","monT"][i]]=+this.value;save();render(CUR,$("#cv"))}});
+$("#dDate").oninput=function(){render(CUR,$("#cv"))};
+$("#copy").onclick=function(){if(!navigator.clipboard||!window.ClipboardItem)return toast("Åbn filen direkte i Edge for at kopiere");
+ navigator.clipboard.write([new ClipboardItem({"image/png":new Promise(function(res){$("#cv").toBlob(res,"image/png")})})]).then(function(){toast("Billede kopieret – indsæt med Ctrl+V")},function(){toast("Kunne ikke kopiere – åbn filen direkte i Edge")})};
+function dlCanvas(cv,name){var a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download=name;document.body.appendChild(a);a.click();a.remove()}
+$("#dl").onclick=function(){dlCanvas($("#cv"),"status-"+CUR+".png")};
+$("#dlAll").onclick=function(){P.forEach(function(p,i){setTimeout(function(){var c=document.createElement("canvas");render(p.k,c);dlCanvas(c,"status-"+p.k+".png")},i*400)})};
+document.querySelectorAll("header .tabs button").forEach(function(b){b.onclick=function(){document.querySelectorAll("header .tabs button").forEach(function(x){x.classList.toggle("on",x===b)});
+ ["dash","admin","hist"].forEach(function(v){$("#v-"+v).hidden=b.dataset.v!==v});if(b.dataset.v==="admin")drawAdmin();else if(b.dataset.v==="hist")drawHist();else drawAll()}});
+
+/* ================= HISTORIK (seneste 30 dage) ================= */
+var KEEP=30;
+function hist(){try{return JSON.parse(ls("sg_hist"))||[]}catch(e){return[]}}
+function prune(h){var c=new Date();c.setDate(c.getDate()-KEEP);var cs=c.toISOString().slice(0,10);return h.filter(function(r){return r.dato>=cs})}
+function autoSave(){var dato=$("#dDate").value;if(!dato||!BLOCKS.length)return;var rows=[];
+ P.forEach(function(p){if(!blockFor("salg",p.k)&&!blockFor("drift",p.k))return;dataFor(p.k).L.forEach(function(o){var r={dato:dato,periode:p.k,navn:o.name};CFG.fields.forEach(function(f){if(o[f.k]!=null)r[f.k]=Math.round(o[f.k]*10000)/10000});rows.push(r)})});
+ if(!rows.length)return;try{ls("sg_hist",JSON.stringify(prune(hist().filter(function(r){return r.dato!==dato}).concat(rows))))}catch(e){}}
+var PL={dag:"I går",uge:"Uge",mtd:"Måned"};
+function drawHist(){var h=prune(hist()),days={};h.forEach(function(r){(days[r.dato]=days[r.dato]||{n:0,p:{}}).n++;days[r.dato].p[r.periode]=1});
+ var ks=Object.keys(days).sort().reverse(),kb=Math.round((ls("sg_hist")||"").length/1024);
+ $("#hInfo").textContent=ks.length?ks.length+" dage gemt · "+h.length+" rækker · ca. "+kb+" KB":"Ingen historik endnu – den fyldes automatisk, når du uploader filer.";
+ $("#hList").innerHTML=ks.length?'<table class="t" style="margin-top:10px"><tr><th>Dato</th><th>Perioder</th><th>Rækker</th><th></th></tr>'+ks.map(function(d){
+  return'<tr><td>'+new Date(d).toLocaleDateString("da-DK",{weekday:"long",day:"numeric",month:"long"})+'</td><td>'+Object.keys(days[d].p).map(function(k){return PL[k]}).join(", ")+'</td><td>'+days[d].n+'</td><td><button class="btn out" data-hd="'+d+'" style="padding:4px 10px">Slet</button></td></tr>'}).join("")+'</table>':"";
+ document.querySelectorAll("[data-hd]").forEach(function(b){b.onclick=function(){ls("sg_hist",JSON.stringify(hist().filter(function(r){return r.dato!==b.dataset.hd})));drawHist()}})}
+function dlText(txt,name,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+txt],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+$("#hCsv").onclick=function(){var h=prune(hist());if(!h.length)return toast("Ingen historik");h.sort(function(a,b){return a.dato<b.dato?-1:a.dato>b.dato?1:0});
+ var ks=["dato","periode","navn"].concat(CFG.fields.map(function(f){return f.k}));
+ var hd=["Dato","Periode","Navn"].concat(CFG.fields.map(function(f){return f.l+(f.f==="time"?" (sek)":f.f==="pct"?" (andel)":"")}));
+ dlText([hd.join(";")].concat(h.map(function(r){return ks.map(function(k){var v=k==="periode"?PL[r[k]]:r[k];return v==null?"":typeof v==="number"?String(v).replace(".",","):'"'+String(v).replace(/"/g,'""')+'"'}).join(";")})).join("\r\n"),"historik-30-dage.csv","text/csv")};
+$("#hJson").onclick=function(){dlText(JSON.stringify({hist:prune(hist()),cfg:CFG}),"historik-backup.json","application/json")};
+$("#hImp").onchange=function(){var f=this.files[0];this.value="";if(!f)return;f.text().then(function(t){try{var o=JSON.parse(t.replace(/^\ufeff/,"")),m={};
+ hist().concat(o.hist||[]).forEach(function(r){m[r.dato+"|"+r.periode+"|"+r.navn]=r});ls("sg_hist",JSON.stringify(prune(Object.values(m))));drawHist();toast("Backup importeret")}catch(e){toast("Ugyldig fil")}})};
+$("#hDel").onclick=function(){if(confirm("Slet al historik?")){ls("sg_hist","[]");drawHist()}};
+
+/* ================= INDSTILLINGER ================= */
+function drawAdmin(){$("#aTeam").value=CFG.team.join("\n");
+ var names={};BLOCKS.forEach(function(b){if(b.src!=="conf")b.rows.forEach(function(r){names[r.name]=1})});
+ var list=Object.keys(names).filter(function(n){var a=CFG.alias[norm(n)];return a!==undefined||!matchName(n)}).sort();
+ $("#aAlias").innerHTML=list.length?'<table class="t"><tr><th>Navn i fil</th><th>Kobles til</th></tr>'+list.map(function(n){var a=CFG.alias[norm(n)];
+  return'<tr><td>'+esc(n)+'</td><td><select data-al="'+esc(norm(n))+'"><option value="__auto"'+(a===undefined?" selected":"")+'>⚠ Ikke koblet</option><option value=""'+(a===""?" selected":"")+'>Ignorér (ikke på teamet)</option>'+CFG.team.map(function(p){return'<option'+(a===p?" selected":"")+'>'+esc(p)+'</option>'}).join("")+'</select></td></tr>'}).join("")+'</table>':'<p class="small">Alle navne er koblet automatisk.</p>';
+ $("#aFields").innerHTML='<table class="t"><tr><th>Vis</th><th>Nøgletal</th><th>Kilde</th><th>Kolonneoverskrift(er)</th><th>Bedst er</th><th>Grøn</th><th>Gul</th></tr>'+CFG.fields.map(function(f,i){
+  var cv=function(v){return v==null||v===""?"":f.f==="pct"?Math.round(v*1000)/10:v};
+  return'<tr><td><input type="checkbox" data-fs="'+i+'"'+(f.show?" checked":"")+'></td><td>'+esc(f.l)+(f.only?' <span class="small">(kun i går)</span>':'')+'</td><td>'+(f.src==="calc"?"Beregnet":'<select data-fsrc="'+i+'">'+SRC.map(function(s){return'<option value="'+s+'"'+(f.src===s?" selected":"")+'>'+LBL[s]+'</option>'}).join("")+'</select>')+'</td>'+
+  '<td>'+(f.src==="calc"?"–":'<input data-fh="'+i+'" value="'+esc(f.h)+'" style="width:220px">')+'</td><td><select data-fd="'+i+'"><option value="">Ingen farve'+(CFG.budget[f.k]?" (budget)":"")+'</option><option value="hi"'+(f.dir==="hi"?" selected":"")+'>Høj</option><option value="lo"'+(f.dir==="lo"?" selected":"")+'>Lav</option></select></td>'+
+  '<td><input type="number" step="any" data-fg="'+i+'" value="'+cv(f.g)+'"></td><td><input type="number" step="any" data-fy="'+i+'" value="'+cv(f.y)+'"></td></tr>'}).join("")+'</table>';
+ $("#aBudget").innerHTML=Object.keys(CFG.budget).map(function(k){var f=CFG.fields.find(function(x){return x.k===k});return'<label>'+(f?f.l:k)+' <input type="number" data-bu="'+k+'" value="'+CFG.budget[k]+'"></label>'}).join("");
+ $("#aYel").value=Math.round(CFG.yel*100)}
+$("#aSave").onclick=function(){CFG.team=$("#aTeam").value.split("\n").map(function(s){return s.trim()}).filter(Boolean);
+ document.querySelectorAll("[data-al]").forEach(function(s){if(s.value==="__auto")delete CFG.alias[s.dataset.al];else CFG.alias[s.dataset.al]=s.value});
+ CFG.fields.forEach(function(f,i){var q=function(a){return document.querySelector("[data-"+a+'="'+i+'"]')};f.show=q("fs").checked;if(q("fsrc"))f.src=q("fsrc").value;if(q("fh"))f.h=q("fh").value;f.dir=q("fd").value||undefined;
+  var g=q("fg").value,y=q("fy").value,cv=function(v){return v===""?null:f.f==="pct"?+v/100:+v};f.g=cv(g);f.y=cv(y)});
+ document.querySelectorAll("[data-bu]").forEach(function(i){CFG.budget[i.dataset.bu]=+i.value});CFG.yel=(+$("#aYel").value||80)/100;save();drawAdmin();toast("Gemt")};
+$("#aReset").onclick=function(){if(confirm("Gendan alle indstillinger til standard?")){var al=CFG.alias,dy=CFG.days;CFG=clone(DEF);CFG.alias=al;CFG.days=dy;save();drawAdmin();toast("Standard gendannet")}};
+
+/* ================= START ================= */
+function initDays(){var t=new Date(),y=new Date(t);do{y.setDate(y.getDate()-1)}while(y.getDay()===0||y.getDay()===6);
+ CFG.days=CFG.days||{};if(!CFG.days.monT)CFG.days.monT=22;if(!CFG.days.week)CFG.days.week=y.getDay();
+ if(!CFG.days.mon){var c=0;for(var d=new Date(y.getFullYear(),y.getMonth(),1);d<=y;d.setDate(d.getDate()+1))if(d.getDay()%6)c++;CFG.days.mon=c}
+ $("#dDate").value=y.toISOString().slice(0,10)}
+load();initDays();$("#dWeek").value=CFG.days.week;$("#dMon").value=CFG.days.mon;$("#dMonT").value=CFG.days.monT;drawAll();
+</script></body></html>
