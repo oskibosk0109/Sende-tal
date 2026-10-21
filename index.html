@@ -449,7 +449,7 @@ function renderSL(cv,M){var S=CFG.sl,rows=M?M.rows:[],n=Math.min(rows.length,+S.
  x.fillStyle="#3F3D3A";x.fillRect(28,HT,TW,HH);x.fillStyle="#fff";x.font="700 "+BP+"px "+F.body;
  C.forEach(function(c,i){x.textAlign=c[3]==="l"?"left":"right";x.fillText(c[0],c[3]==="l"?xs[i]+10:xs[i]+c.w-14,HT+HH/2+BP*.35)});
  for(var r=0;r<n;r++){var o=rows[r],y=RT+r*RH,yel=slYellow(o.name),red=o.konv!=null&&o.konv<S.convRed;
-  x.fillStyle=yel?"#F6D84C":(r%2===0?"#E6E1D3":"#CFCBBE");x.fillRect(28,y,TW,RH);
+  x.fillStyle=(r%2===0?"#E6E1D3":"#CFCBBE");x.fillRect(28,y,TW,RH);if(yel){x.fillStyle="#F6D84C";x.fillRect(xs[0],y,C[0].w,RH)}
   C.forEach(function(c,i){var kk=c[1],txt=kk==="name"?o.name:kk==="team"?o.team:kk==="icc"?pcs(o.icc,1):kk==="konv"?pcs(o.konv,2):kk==="tid"?hm(o.tid):kk==="csat"?pcs(o.csat,1):kk==="pts"?o.pts.toFixed(2).replace(".",","):String(o[kk]);
    var isRed=red&&(kk==="name"||kk==="konv");x.fillStyle=isRed?"#B0121B":"#2E2924";x.font=(isRed?"700":"400")+" "+BP+"px "+F.body;
    x.textAlign=c[3]==="l"?"left":"right";x.fillText(txt,c[3]==="l"?xs[i]+10:xs[i]+c.w-14,y+RH/2+BP*.35)})}
